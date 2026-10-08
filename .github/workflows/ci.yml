@@ -63,7 +63,7 @@ jobs:
             sleep 5
           done
           curl -fsS -o /dev/null http://localhost/
-      - name: Install the module and run the demo setup (twice: the second run changes nothing)
+      - name: 'Install the module and run the demo setup (twice: the second run changes nothing)'
         run: |
           docker cp demo ps:/opt/demo
           unzip -q dist/supertext-*.zip -d modules-ci
