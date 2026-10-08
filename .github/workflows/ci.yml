@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.1', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: Lint
+        run: find supertext demo tests -name '*.php' -not -path '*/vendor/*' -print0 | xargs -0 -n1 php -l
+      - run: composer install --no-interaction --no-progress
+      - run: composer test
+      - name: Demo entrypoint syntax
+        run: sh -n demo/entrypoint.sh
+      - run: ./build.sh
+
+  # Installs PrestaShop 9 like the demo does, installs the built module, runs the demo
+  # setup twice, then translates the sample content against the stand-in API.
+  prestashop:
+    needs: unit
+    runs-on: ubuntu-latest
+    env:
+      PS_IMAGE: prestashop/prestashop:9
+      DEMO_ADMIN_EMAIL: admin@example.com
+      DEMO_ADMIN_PASSWORD: Ci-Admin-Chocolate-2026!
+      DEMO_EDITOR_EMAIL: editor@example.com
+      DEMO_EDITOR_PASSWORD: Ci-Editor-Chocolate-2026!
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build the module
+        run: ./build.sh
+      - name: Start the stand-in API
+        run: nohup node tests/docs/stand-in.mjs > standin.log 2>&1 &
+      - name: Start MariaDB and PrestaShop
+        run: |
+          docker run -d --name db --network host -e MARIADB_ROOT_PASSWORD=admin -e MARIADB_DATABASE=prestashop mariadb:11
+          sleep 15
+          docker run -d --name ps --network host \
+            -e DB_SERVER=127.0.0.1 -e DB_PASSWD=admin -e PS_INSTALL_AUTO=1 -e PS_DOMAIN=localhost \
+            -e PS_COUNTRY=CH -e PS_FOLDER_ADMIN=admin-ci -e ADMIN_MAIL=installer@example.com -e ADMIN_PASSWD=Installer-Ci-2026! \
+            -e SUPERTEXT_API_KEY="Supertext-Auth-Key ci-key" -e SUPERTEXT_API_ENDPOINT=http://127.0.0.1:8765/v1/ \
+            "$PS_IMAGE"
+          # Wait for the installer. The 9.x image may exit after installing (it tries to remove an
+          # install folder the installer already removed); then just start it again.
+          for i in $(seq 1 120); do
+            if [ "$(docker inspect -f '{{.State.Running}}' ps)" != "true" ]; then docker start ps; fi
+            if curl -fsS -o /dev/null http://localhost/ 2>/dev/null; then break; fi
+            sleep 5
+          done
+          curl -fsS -o /dev/null http://localhost/
+      - name: Install the module and run the demo setup (twice: the second run changes nothing)
+        run: |
+          docker cp demo ps:/opt/demo
+          unzip -q dist/supertext-*.zip -d modules-ci
+          docker cp modules-ci/supertext ps:/var/www/html/modules/supertext
+          docker exec ps chown -R www-data:www-data /var/www/html/modules/supertext
+          run() { docker exec -e DEMO_ADMIN_EMAIL -e DEMO_ADMIN_PASSWORD -e DEMO_EDITOR_EMAIL -e DEMO_EDITOR_PASSWORD -e PS_FOLDER_ADMIN=admin-ci ps runuser -u www-data --preserve-environment -- "$@"; }
+          run php /opt/demo/setup.php --remove-employee=installer@example.com | tee setup1.log
+          run php /opt/demo/setup.php | tee setup2.log
+          ! grep -E 'added|created' setup2.log
+          ! grep -F "$DEMO_ADMIN_PASSWORD" setup1.log
+      - name: Translate the sample content
+        run: |
+          q() { docker exec db mariadb -uroot -padmin prestashop -N -e "$1"; }
+          product=$(q "SELECT id_product FROM ps_product WHERE reference='ST-DEMO-PRALINES'")
+          category=$(q "SELECT id_category FROM ps_category_lang WHERE link_rewrite='swiss-chocolate' LIMIT 1")
+          page=$(q "SELECT id_cms FROM ps_cms_lang WHERE link_rewrite='delivery-and-returns' LIMIT 1")
+          console() { docker exec ps runuser -u www-data --preserve-environment -- php /var/www/html/bin/console "$@"; }
+          console supertext:translate product "$product"
+          console supertext:translate category "$category" --to=de
+          console supertext:translate cms "$page" --to=fr
+          de=$(q "SELECT id_lang FROM ps_lang WHERE iso_code='de'")
+          fr=$(q "SELECT id_lang FROM ps_lang WHERE iso_code='fr'")
+          test "$(q "SELECT name FROM ps_product_lang WHERE id_product=$product AND id_lang=$de")" = "Pralinenbox mit dunkler Schokolade"
+          test "$(q "SELECT link_rewrite FROM ps_product_lang WHERE id_product=$product AND id_lang=$de")" = "pralinenbox-mit-dunkler-schokolade"
+          q "SELECT description FROM ps_product_lang WHERE id_product=$product AND id_lang=$de" | grep -q '<strong>Berner</strong>'
+          test "$(q "SELECT name FROM ps_category_lang WHERE id_category=$category AND id_lang=$de")" = "Schweizer Schokolade"
+          test "$(q "SELECT meta_title FROM ps_cms_lang WHERE id_cms=$page AND id_lang=$fr")" = "Livraison et retours"
+          test "$(q "SELECT COUNT(*) FROM ps_employee")" = "2"
+      - name: Second run skips existing translations
+        run: |
+          product=$(docker exec db mariadb -uroot -padmin prestashop -N -e "SELECT id_product FROM ps_product WHERE reference='ST-DEMO-PRALINES'")
+          docker exec ps runuser -u www-data --preserve-environment -- php /var/www/html/bin/console supertext:translate product "$product" | grep -c skipped | grep -q 3
+      - if: failure()
+        run: cat standin.log; docker logs ps 2>&1 | tail -80

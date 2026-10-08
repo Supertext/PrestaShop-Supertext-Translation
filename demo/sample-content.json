@@ -1,0 +1,44 @@
+{
+    "category": {
+        "name": "Swiss chocolate",
+        "link_rewrite": "swiss-chocolate",
+        "description": "<p>Handmade pralines, bars and truffles from our workshop in <strong>Bern</strong>.</p>",
+        "meta_title": "Swiss chocolate from Bern",
+        "meta_description": "Handmade pralines, bars and truffles, delivered fresh across Switzerland."
+    },
+    "products": [
+        {
+            "reference": "ST-DEMO-PRALINES",
+            "price": 24.9,
+            "name": "Dark chocolate praline box",
+            "link_rewrite": "dark-chocolate-praline-box",
+            "description_short": "<p>Twelve handmade pralines with <strong>70% dark chocolate</strong> from Bern.</p>",
+            "description": "<h2>Made by hand in Bern</h2>\n<p>Every praline is filled and decorated by hand in our <strong>Bern</strong> workshop. Read more about <a href=\"https://www.supertext.com\">our chocolatiers</a>.</p>\n<ul>\n<li>Fresh cream and butter from local farms</li>\n<li>No palm oil, no preservatives</li>\n<li>Best before: six weeks after delivery</li>\n</ul>",
+            "meta_title": "Dark chocolate praline box with 12 pralines",
+            "meta_description": "Twelve handmade dark chocolate pralines from Bern, delivered fresh in one to two days.",
+            "available_now": "In stock",
+            "available_later": "Back in stock soon",
+            "delivery_in_stock": "Delivered in 1 to 2 working days",
+            "delivery_out_stock": "Delivered in 1 to 2 weeks"
+        },
+        {
+            "reference": "ST-DEMO-BAR",
+            "price": 6.5,
+            "name": "Milk chocolate bar with hazelnuts",
+            "link_rewrite": "milk-chocolate-bar-with-hazelnuts",
+            "description_short": "<p>Creamy Swiss milk chocolate with whole roasted <em>Piedmont hazelnuts</em>.</p>",
+            "description": "<p>Our classic bar: alpine milk chocolate and whole hazelnuts, roasted in small batches.</p>\n<ul>\n<li>Contains milk and nuts</li>\n<li>Wrapped in recycled paper</li>\n</ul>",
+            "meta_title": "Milk chocolate bar with hazelnuts",
+            "meta_description": "Swiss milk chocolate with whole roasted hazelnuts.",
+            "available_now": "In stock",
+            "delivery_in_stock": "Delivered in 1 to 2 working days"
+        }
+    ],
+    "page": {
+        "meta_title": "Delivery and returns",
+        "head_seo_title": "Delivery and returns for chocolate orders",
+        "meta_description": "How we ship our chocolate and how to return an order.",
+        "link_rewrite": "delivery-and-returns",
+        "content": "<h2>Delivery</h2>\n<p>We ship from Bern every working day. Orders placed before <strong>2 pm</strong> leave the same day.</p>\n<h2>Returns</h2>\n<p>Not happy? Send the unopened box back within <strong>14 days</strong> and we refund the full price. See our <a href=\"https://www.supertext.com\">contact page</a> for the address.</p>"
+    }
+}

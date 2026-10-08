@@ -1,0 +1,11 @@
+supertext_translate:
+  path: supertext/translate
+  methods: [GET, POST]
+  defaults:
+    _controller: 'Supertext\PrestaShop\Controller\Admin\TranslateController::translateAction'
+
+supertext_translate_run:
+  path: supertext/translate/run
+  methods: [POST]
+  defaults:
+    _controller: 'Supertext\PrestaShop\Controller\Admin\TranslateController::runAction'

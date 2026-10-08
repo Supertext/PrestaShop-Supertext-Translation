@@ -1,0 +1,8 @@
+services:
+  Supertext\PrestaShop\Controller\Admin\TranslateController:
+    class: Supertext\PrestaShop\Controller\Admin\TranslateController
+    public: true
+
+  Supertext\PrestaShop\Command\TranslateCommand:
+    class: Supertext\PrestaShop\Command\TranslateCommand
+    tags: ['console.command']

@@ -1,0 +1,10 @@
+/vendor/
+/composer.lock
+/dist/
+/.phpunit.cache/
+/supertext/vendor/
+/supertext/config.xml
+/supertext/config_*.xml
+/tests/docs/node_modules
+/tests/docs/package-lock.json
+.DS_Store

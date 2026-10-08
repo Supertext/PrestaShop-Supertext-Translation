@@ -1,0 +1,19 @@
+{
+    "name": "supertext/prestashop-supertext-translation",
+    "description": "Supertext AI translation for PrestaShop products, categories and CMS pages",
+    "type": "prestashop-module",
+    "license": "MIT",
+    "authors": [{ "name": "Supertext AG", "homepage": "https://www.supertext.com" }],
+    "require": {
+        "php": ">=8.1"
+    },
+    "autoload": {
+        "psr-4": { "Supertext\\PrestaShop\\": "src/" },
+        "classmap": ["supertext.php"]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "prepend-autoloader": false,
+        "platform": { "php": "8.1" }
+    }
+}

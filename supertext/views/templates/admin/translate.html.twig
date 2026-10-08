@@ -1,0 +1,188 @@
+{#
+ # Translate with Supertext: the selected items, a column per shop language, and the
+ # languages to translate into. Translating calls runUrl once per item and language.
+ #}
+{% extends '@PrestaShop/Admin/layout.html.twig' %}
+{% block content %}
+{% set d = 'Modules.Supertext.Admin' %}
+<style>
+  .supertext-page .st-state { font-size: .85rem; }
+  .supertext-page .st-table td:first-child { min-width: 14rem; }
+  .supertext-page .st-state.none { color: #6c868e; }
+  .supertext-page .st-state.partial { color: #a35c00; }
+  .supertext-page .st-state.translated, .supertext-page .st-state.done { color: #1f8a49; font-weight: 600; }
+  .supertext-page .st-state.error { color: #c0392b; font-weight: 600; white-space: normal; }
+  .supertext-page .st-state.running { color: #25b9d7; }
+  .supertext-page .st-langs label { margin-right: 1.5rem; font-weight: normal; }
+  .supertext-page .st-overwrite-warning { display: none; margin-top: .75rem; margin-bottom: 0; }
+  .supertext-page .st-overwrite:checked ~ .st-overwrite-warning { display: block; }
+  .supertext-page .st-summary { display: none; }
+  .supertext-page th.st-lang, .supertext-page td.st-lang-cell { min-width: 9rem; }
+</style>
+
+<div class="supertext-page" data-run-url="{{ runUrl }}" data-type="{{ type }}" data-source="{{ source.id }}">
+  {% if not hasApiKey %}
+    <div class="alert alert-warning">
+      <p><strong>{{ 'Supertext is not set up yet.'|trans({}, d) }}</strong>
+        {{ 'An administrator needs to enter the API key in the %link%module settings%end%.'|trans({'%link%': '<a href="' ~ settingsUrl ~ '">', '%end%': '</a>'}, d)|raw }}</p>
+      <p>{{ 'No Supertext account yet?'|trans({}, d) }}
+        <a href="{{ signupUrl }}" target="_blank" rel="noopener">{{ 'Create one at supertext.com.'|trans({}, d) }}</a>
+        {{ 'Generate your API key at'|trans({}, d) }}
+        <a href="{{ apiKeyUrl }}" target="_blank" rel="noopener">supertext.com → Integrations → API</a>
+        {{ '(requires the Admin role).'|trans({}, d) }}</p>
+    </div>
+  {% endif %}
+
+  {% if not canEdit %}
+    <div class="alert alert-danger">{{ 'You are not allowed to edit this item.'|trans({}, d) }}</div>
+  {% endif %}
+
+  <div class="card">
+    <h3 class="card-header"><i class="material-icons">translate</i> {{ typeLabel }}: {{ items|length }}</h3>
+    <div class="card-body">
+      {% if items is empty %}
+        <p>{{ 'Nothing selected. Go back to the list and tick the items to translate.'|trans({}, d) }}</p>
+      {% else %}
+        <form class="st-form" onsubmit="return false">
+          <div class="form-group row">
+            <label class="col-sm-3 col-form-label" for="st-source">{{ 'Translate from'|trans({}, d) }}</label>
+            <div class="col-sm-4">
+              <select id="st-source" class="custom-select" onchange="location.href='{{ selfUrl|e('js') }}&source=' + this.value">
+                {% for language in languages %}
+                  <option value="{{ language.id }}"{% if language.id == source.id %} selected{% endif %}>{{ language.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label">{{ 'Translate into'|trans({}, d) }}</div>
+            <div class="col-sm-9 st-langs pt-2">
+              {% for language in targets %}
+                <label for="st-lang-{{ language.id }}">
+                  <input type="checkbox" class="st-target" id="st-lang-{{ language.id }}" value="{{ language.id }}" checked>
+                  {{ language.name }} <code>{{ language.code }}</code>{% if not language.active %} <span class="badge badge-secondary">{{ 'Inactive'|trans({}, d) }}</span>{% endif %}
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3"></div>
+            <div class="col-sm-9">
+              <input type="checkbox" class="st-overwrite" id="st-overwrite">
+              <label for="st-overwrite" class="mb-0">{{ 'Overwrite existing translations'|trans({}, d) }}</label>
+              <div class="alert alert-warning st-overwrite-warning" role="alert">
+                {{ 'Fields that are already translated will be replaced by the new Supertext translation. Changes made by hand in those languages are lost.'|trans({}, d) }}
+              </div>
+              <p class="small text-muted mt-2 mb-0">{{ 'Without this option, only fields that are empty or still identical to the source language are filled.'|trans({}, d) }}</p>
+            </div>
+          </div>
+
+          <table class="table st-table">
+            <thead>
+              <tr>
+                <th>{{ 'Name'|trans({}, d) }} ({{ source.name }})</th>
+                {% for language in targets %}
+                  <th class="st-lang" data-lang="{{ language.id }}">{{ language.name }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in items %}
+                <tr data-id="{{ item.id }}">
+                  <td><a href="{{ item.editUrl }}">{{ item.title }}</a> <span class="text-muted">#{{ item.id }}</span></td>
+                  {% for language in targets %}
+                    {% set state = item.states[language.id] %}
+                    <td class="st-lang-cell" data-lang="{{ language.id }}">
+                      <span class="st-state {{ state }}">
+                        {%- if state == 'translated' -%}✓ {{ 'Translated'|trans({}, d) }}
+                        {%- elseif state == 'partial' -%}◐ {{ 'Partly translated'|trans({}, d) }}
+                        {%- else -%}– {{ 'Not translated'|trans({}, d) }}{%- endif -%}
+                      </span>
+                    </td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <div class="alert alert-success st-summary" role="status"></div>
+        </form>
+      {% endif %}
+    </div>
+    <div class="card-footer d-flex justify-content-between">
+      <a class="btn btn-outline-secondary" href="{{ listUrl }}">{{ 'Back to the list'|trans({}, d) }}</a>
+      {% if items is not empty %}
+        <button type="button" class="btn btn-primary st-go"{% if not hasApiKey or not canEdit %} disabled{% endif %}>
+          <i class="material-icons">translate</i> {{ 'Translate'|trans({}, d) }}
+        </button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var root = document.querySelector('.supertext-page');
+  var go = root && root.querySelector('.st-go');
+  if (!go) return;
+  var t = {
+    running: {{ 'Translating…'|trans({}, d)|json_encode|raw }},
+    queued: {{ 'Waiting…'|trans({}, d)|json_encode|raw }},
+    failed: {{ 'Failed'|trans({}, d)|json_encode|raw }},
+    noLang: {{ 'Choose at least one language to translate into.'|trans({}, d)|json_encode|raw }},
+    done: {{ 'Done: %ok% translated, %skipped% unchanged, %failed% failed.'|trans({}, d)|json_encode|raw }},
+    skippedHint: {{ 'To replace existing translations, tick "Overwrite existing translations" and translate again.'|trans({}, d)|json_encode|raw }}
+  };
+
+  go.addEventListener('click', async function () {
+    var langs = Array.prototype.map.call(root.querySelectorAll('.st-target:checked'), function (c) { return c.value; });
+    if (!langs.length) { alert(t.noLang); return; }
+    var overwrite = root.querySelector('.st-overwrite').checked;
+    var rows = Array.prototype.slice.call(root.querySelectorAll('.st-table tbody tr'));
+    var jobs = [];
+    rows.forEach(function (row) {
+      langs.forEach(function (lang) {
+        var cell = row.querySelector('td[data-lang="' + lang + '"] .st-state');
+        cell.className = 'st-state queued'; cell.textContent = t.queued;
+        jobs.push({ id: row.getAttribute('data-id'), lang: lang, cell: cell });
+      });
+    });
+    go.disabled = true;
+    var counts = { ok: 0, skipped: 0, failed: 0 };
+    for (var i = 0; i < jobs.length; i++) {
+      var job = jobs[i];
+      job.cell.className = 'st-state running'; job.cell.textContent = t.running;
+      var body = new FormData();
+      body.append('type', root.getAttribute('data-type'));
+      body.append('id', job.id);
+      body.append('source', root.getAttribute('data-source'));
+      body.append('target', job.lang);
+      body.append('overwrite', overwrite ? '1' : '0');
+      try {
+        var response = await fetch(root.getAttribute('data-run-url'), { method: 'POST', body: body, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        var data = await response.json();
+        if (data.ok) {
+          job.cell.className = 'st-state ' + (data.status === 'unchanged' ? 'translated' : 'done');
+          job.cell.textContent = '✓ ' + data.message;
+          counts[data.status === 'unchanged' ? 'skipped' : 'ok']++;
+        } else {
+          job.cell.className = 'st-state error'; job.cell.textContent = '✕ ' + (data.message || t.failed);
+          counts.failed++;
+        }
+      } catch (e) {
+        job.cell.className = 'st-state error'; job.cell.textContent = '✕ ' + t.failed + ' (' + e.message + ')';
+        counts.failed++;
+      }
+    }
+    var summary = root.querySelector('.st-summary');
+    summary.textContent = t.done.replace('%ok%', counts.ok).replace('%skipped%', counts.skipped).replace('%failed%', counts.failed)
+      + (counts.skipped && !overwrite ? ' ' + t.skippedHint : '');
+    summary.className = 'alert st-summary ' + (counts.failed ? 'alert-warning' : 'alert-success');
+    summary.style.display = 'block';
+    go.disabled = false;
+  });
+})();
+</script>
+{% endblock %}
