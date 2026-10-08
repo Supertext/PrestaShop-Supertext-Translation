@@ -119,7 +119,7 @@ CI (`.github/workflows/ci.yml`):
 
 ## Demo (Railway)
 
-`demo/` is a PrestaShop 9 shop with English sample content, German (Switzerland), French (Switzerland) and Italian (Switzerland), and this module. The Railway service *PrestaShop* (project *supertext-cms-demos-php*, region ams, https://prestashop-production-778d.up.railway.app/, back office `/admin-dev/`) builds `demo/Dockerfile` with the repository root as context, from `main`. Railway no longer reads `railway.json` (config as code is deprecated), so the Dockerfile path, healthcheck (`/`, 900 s) and restart policy are set on the service itself; `railway.json` documents the same values.
+`demo/` is a PrestaShop 9 shop with English sample content, German (Switzerland), French (Switzerland) and Italian (Switzerland), and this module. The Railway service *PrestaShop* (project *supertext-cms-demos-php*, region ams, https://prestashop-production-778d.up.railway.app/, back office `/admin-dev/`) builds `demo/Dockerfile` with the repository root as context, from `main`. Railway no longer reads `railway.json` (config as code is deprecated), so the Dockerfile path, healthcheck (`/health`, a static file, because PrestaShop's pages redirect to the HTTPS domain; 900 s) and restart policy are set on the service itself; `railway.json` documents the same values.
 
 The container keeps **no files** between deploys (Railway allows only a few volumes per project):
 
