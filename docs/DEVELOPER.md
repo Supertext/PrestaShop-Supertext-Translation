@@ -119,25 +119,25 @@ CI (`.github/workflows/ci.yml`):
 
 ## Demo (Railway)
 
-`demo/` is a PrestaShop 9 shop with English sample content, German (Switzerland), French (Switzerland) and Italian (Switzerland), and this module. `railway.json` builds `demo/Dockerfile` with the repository root as context.
+`demo/` is a PrestaShop 9 shop with English sample content, German (Switzerland), French (Switzerland) and Italian (Switzerland), and this module. The Railway service *PrestaShop* (project *supertext-cms-demos-php*, region ams, https://prestashop-production-778d.up.railway.app/, back office `/admin-dev/`) builds `demo/Dockerfile` with the repository root as context, from `main`. Railway no longer reads `railway.json` (config as code is deprecated), so the Dockerfile path, healthcheck (`/`, 900 s) and restart policy are set on the service itself; `railway.json` documents the same values.
 
 The container keeps **no files** between deploys (Railway allows only a few volumes per project):
 
 - The shop is in MySQL: `DATABASE_URL` (`mysql://…`, the shared Railway MySQL service) and its own database `PRESTASHOP_DB_NAME` (default `prestashop`), created if missing.
 - `app/config/parameters.php` (database access and PrestaShop's secret keys) is stored in that database (`supertext_demo_state`, `demo/state.php`) and restored on every start.
 - On the **first start** (empty database) `demo/entrypoint.sh` runs PrestaShop's installer with a throwaway SuperAdmin (random `@supertext-demo.invalid` address and password, never shown). PrestaShop's install screen is never shown: the `DEMO_*` accounts replace it, and `demo/setup.php` deletes the installer account as soon as the `DEMO_ADMIN` account exists.
-- On **every start**, the entrypoint copies the module from the image into `modules/`, points the shop at the current domain (`PS_DOMAIN`, else `RAILWAY_PUBLIC_DOMAIN`; HTTPS except for localhost), and runs `demo/setup.php`. It installs the module if needed, adds the languages and sample content (`demo/sample-content.json`) if missing, downloads missing language packs and flags again (they are files), and creates missing accounts. It never changes existing content, translations or accounts.
+- On **every start**, the entrypoint copies the module from the image into `modules/`, points the shop at the current domain (`PRESTASHOP_DOMAIN`, else `RAILWAY_PUBLIC_DOMAIN`; HTTPS except for localhost), and runs `demo/setup.php`. It installs the module if needed, adds the languages and sample content (`demo/sample-content.json`) if missing, downloads missing language packs and flags again (they are files), and creates missing accounts. It never changes existing content, translations or accounts.
 - Product images and other uploads are lost on redeploy (the sample products have none).
 
 Variables (Railway service variables; template in `demo/.env.example`):
 
 | Variable | Purpose |
 | --- | --- |
-| `DATABASE_URL` | MySQL server, `mysql://user:password@host:port/any` |
+| `DATABASE_URL` | MySQL server, `mysql://user:password@host:port/any`. On Railway: `mysql://root:${{MySQL-8.MYSQL_ROOT_PASSWORD}}@${{MySQL-8.RAILWAY_PRIVATE_DOMAIN}}:3306/mysql` (the shared MySQL 8.4 service; root is needed to create the database) |
 | `PRESTASHOP_DB_NAME` | The demo's database on it (default `prestashop`) |
 | `PRESTASHOP_SHOP_NAME` | Shop name at installation (default *Supertext Chocolate Demo*) |
 | `PRESTASHOP_ADMIN_FOLDER` | Back-office path (default `admin-dev`) |
-| `PS_DOMAIN` | Public host name; default `RAILWAY_PUBLIC_DOMAIN` |
+| `PRESTASHOP_DOMAIN` | Public host name; default `RAILWAY_PUBLIC_DOMAIN`. (Not `PS_DOMAIN`: the base image sets that to a placeholder.) |
 | `SUPERTEXT_API_KEY` | Supertext API key. No Supertext account yet? Create one at https://www.supertext.com/person/en/account/signin. Generate your API key at https://www.supertext.com/en/integrations/api (requires the Admin role). |
 | `SUPERTEXT_API_ENDPOINT` | Optional: another API, e.g. the stand-in |
 | `DEMO_ADMIN_EMAIL`, `DEMO_ADMIN_PASSWORD` | SuperAdmin for Supertext staff. `PRESTASHOP_ADMIN_EMAIL` / `PRESTASHOP_ADMIN_PASSWORD` are read as fallbacks. |
@@ -150,7 +150,7 @@ Build and run it locally:
 
 ```bash
 docker build -f demo/Dockerfile -t supertext-prestashop-demo .
-docker run --rm -p 8090:80 -e PS_DOMAIN=localhost:8090 \
+docker run --rm -p 8090:80 -e PRESTASHOP_DOMAIN=localhost:8090 \
   -e DATABASE_URL=mysql://root:admin@host.docker.internal:3306/mysql \
   -e DEMO_ADMIN_EMAIL=… -e DEMO_ADMIN_PASSWORD=… -e DEMO_EDITOR_EMAIL=… -e DEMO_EDITOR_PASSWORD=… \
   supertext-prestashop-demo

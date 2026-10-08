@@ -66,5 +66,5 @@ Lessons from the live API, apply them here: header `Authorization: Supertext-Aut
 - Translated fields live in `supertext/src/Translation/EntityTypes.php`; keep "What is translated" in `docs/DEVELOPER.md` and `docs/USER_GUIDE.md` in sync.
 - Keep `supertext/src/Api` and `FieldPlanner` free of PrestaShop classes (unit tests run without PrestaShop).
 - User-visible strings use the translation domain `Modules.Supertext.Admin`.
-- `demo/` is the Railway demo (`railway.json` → `demo/Dockerfile`, context = repo root). `demo/setup.php` seeds languages, sample content and accounts. Demo secrets live only in Railway variables. Don't export-ignore `demo/` or `supertext/` in `.gitattributes`: Railway builds from a `git archive` snapshot.
+- `demo/` is the Railway demo (service *PrestaShop* in *supertext-cms-demos-php*, building `demo/Dockerfile` with context = repo root; set on the service, Railway ignores `railway.json`). `demo/setup.php` seeds languages, sample content and accounts. Demo secrets live only in Railway variables. Don't export-ignore `demo/` or `supertext/` in `.gitattributes`: Railway builds from a `git archive` snapshot.
 - PrestaShop 9 installer quirks the demo depends on: it must run from the web root, it expects the admin folder to be `admin` or `admin-dev`, and `--country` must be upper case (`CH`), or it installs the country's languages and fails.

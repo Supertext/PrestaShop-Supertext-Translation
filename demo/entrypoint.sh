@@ -40,7 +40,8 @@ DB_HOST=$(echo "$DB" | cut -d' ' -f1)
 DB_PORT=$(echo "$DB" | cut -d' ' -f2)
 DB_USER=$(echo "$DB" | cut -d' ' -f3)
 DB_NAME=$(echo "$DB" | cut -d' ' -f4)
-DOMAIN="${PS_DOMAIN:-${RAILWAY_PUBLIC_DOMAIN:-localhost}}"
+# Not PS_DOMAIN: the image sets it to "<to be defined>".
+DOMAIN="${PRESTASHOP_DOMAIN:-${RAILWAY_PUBLIC_DOMAIN:-localhost}}"
 SSL=1
 case "$DOMAIN" in localhost*|127.*) SSL=0 ;; esac
 

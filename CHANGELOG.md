@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Demo: the public host name comes from `PRESTASHOP_DOMAIN` (or Railway's domain) instead of `PS_DOMAIN`, which the base image sets to a placeholder; the demo now runs on Railway.
+
 ## 0.1.0 — 2026-10-08
 
 - First version: PrestaShop module `supertext` (PrestaShop 9.x tested, 8.1+ supported; PHP 8.1+).
