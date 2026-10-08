@@ -121,6 +121,8 @@ CI (`.github/workflows/ci.yml`):
 
 `demo/` is a PrestaShop 9 shop with English sample content, German (Switzerland), French (Switzerland) and Italian (Switzerland), and this module. The Railway service *PrestaShop* (project *supertext-cms-demos-php*, region ams, https://prestashop-production-778d.up.railway.app/, back office `/admin-dev/`) builds `demo/Dockerfile` with the repository root as context, from `main`. Railway no longer reads `railway.json` (config as code is deprecated), so the Dockerfile path, healthcheck (`/health`, a static file, because PrestaShop's pages redirect to the HTTPS domain; 900 s) and restart policy are set on the service itself; `railway.json` documents the same values.
 
+Every push to `main` deploys the demo (Railway's GitHub app watches the repository). If a push doesn't deploy, check Railway's access under https://github.com/organizations/Supertext/settings/installations and then reconnect the service's source once, so Railway re-creates its push trigger.
+
 The container keeps **no files** between deploys (Railway allows only a few volumes per project):
 
 - The shop is in MySQL: `DATABASE_URL` (`mysql://…`, the shared Railway MySQL service) and its own database `PRESTASHOP_DB_NAME` (default `prestashop`), created if missing.
