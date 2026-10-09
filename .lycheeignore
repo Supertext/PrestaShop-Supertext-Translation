@@ -1,0 +1,2 @@
+# Local development URLs (docs/DEVELOPER.md): only reachable on a developer machine
+^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?(/|$)
