@@ -39,7 +39,7 @@ final class EntityTranslator
         $object     = self::load($definition['class'], $id, $idShop);
 
         if (!\Validate::isLoadedObject($object)) {
-            throw new SupertextException(sprintf('%s %d does not exist.', $definition['class'], $id));
+            throw new SupertextException('%type% %id% does not exist.', ['%type%' => $definition['class'], '%id%' => $id]);
         }
 
         $sourceId = (int) $source->id;
@@ -96,7 +96,7 @@ final class EntityTranslator
         $error = $object->validateFieldsLang(false, true);
 
         if ($error !== true) {
-            throw new SupertextException(sprintf('The translation could not be saved: %s', strip_tags((string) $error)));
+            throw new SupertextException('The translation could not be saved: %error%', ['%error%' => strip_tags((string) $error)]);
         }
 
         if (!$object->update()) {

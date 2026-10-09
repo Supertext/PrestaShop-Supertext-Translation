@@ -2,6 +2,8 @@
 
 For shop editors. Once an administrator has set up the module (see [INSTALLATION.md](INSTALLATION.md)), you translate products, categories and CMS pages from the PrestaShop back office. Supertext writes the translation into the item's other languages; you review it like any other edit.
 
+The module's screens follow your back-office language (English, German, French or Italian; set it in *Your profile*).
+
 ## Try it on the demo
 
 The Supertext PrestaShop demo (ask Supertext for the address and a back-office login) has two English sample products, the category *Swiss chocolate* and the CMS page *Delivery and returns*, with German (Switzerland), French (Switzerland) and Italian (Switzerland) set up as languages. Translate them as described below, then switch the shop to another language.

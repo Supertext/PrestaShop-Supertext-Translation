@@ -206,7 +206,7 @@ final class SupertextClient
             try {
                 $response = ($this->transport)($method, $this->baseUrl . $path, $headers, $body);
             } catch (\Throwable $e) {
-                throw new SupertextException('Could not reach Supertext: ' . $e->getMessage(), 0, $e);
+                throw new SupertextException('Could not reach Supertext: %error%', ['%error%' => $e->getMessage()], 0, $e);
             }
 
             if ($response['status'] !== 429 || $attempt >= self::RATE_LIMIT_RETRIES) {
@@ -228,16 +228,12 @@ final class SupertextClient
             $code === 413                => 'The content is too large for Supertext to translate in one go.',
             $code === 429                => 'Too many requests to Supertext. Please try again shortly.',
             $code >= 500                 => 'The Supertext service is currently unavailable.',
-            default                      => sprintf('Supertext answered with HTTP %d.', $code),
+            default                      => 'Supertext answered with HTTP %status%.',
         };
 
-        $detail = trim(strip_tags($response['body']));
+        $detail = mb_substr(trim(strip_tags($response['body'])), 0, 200);
 
-        if ($detail !== '') {
-            $message .= ' (' . mb_substr($detail, 0, 200) . ')';
-        }
-
-        throw new SupertextException($message, $code);
+        throw new SupertextException($message, ['%status%' => $code], $code, null, $detail);
     }
 
     /** Seconds to wait before retry $attempt (0-based): Retry-After if sent, else 1, 2, 4, 8 plus jitter. */

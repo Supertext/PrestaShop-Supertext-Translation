@@ -203,7 +203,10 @@ class Supertext extends Module
         try {
             Settings::client()->validateApiKey();
         } catch (SupertextException $e) {
-            return $this->displayError(htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $message = $this->trans($e->template(), $e->parameters(), 'Modules.Supertext.Admin');
+            $message .= $e->detail() !== '' ? ' (' . $e->detail() . ')' : '';
+
+            return $this->displayError(htmlspecialchars($message, ENT_QUOTES, 'UTF-8'));
         }
 
         return $this->displayConfirmation($this->trans('Connected. The API key works.', [], 'Modules.Supertext.Admin'));

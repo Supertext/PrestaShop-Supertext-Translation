@@ -23,6 +23,10 @@ Everywhere an administrator enters or is told about the API key — the settings
 
 Wording: "No Supertext account yet? Create one at supertext.com. Generate your API key at supertext.com → Integrations → API (requires the Admin role)." In the UI, links open in a new tab (`target="_blank" rel="noopener"`); where the CMS shows plain text only, use the bare URLs. New screens or messages that mention the key get the links too.
 
+## UI languages (always)
+
+The plugin's own UI (buttons, panels, dialogs, settings, permissions, messages) is available in English, German, French and Italian through the CMS's own translation mechanism, so it follows the user's back-end language. New or changed strings get all four languages in the same commit. Formal address (Sie, vous, Lei), the CMS's own terms in each language, "Supertext", placeholders and URLs never translated.
+
 ## Plugin list (always)
 
 `README.md` ends with the shared list of all Supertext plugins (between the `<!-- supertext-plugins:start -->` and `<!-- supertext-plugins:end -->` markers). It is identical in every Supertext plugin repo: when a plugin is added, renamed or its description changes, update the list in **all** repos, not just this one.
@@ -77,6 +81,6 @@ Lessons from the live API, apply them here: header `Authorization: Supertext-Aut
 - New settings go in `supertext/src/Settings.php`, `views/templates/admin/configure.tpl` **and** the settings table in `docs/INSTALLATION.md`.
 - Translated fields live in `supertext/src/Translation/EntityTypes.php`; keep "What is translated" in `docs/DEVELOPER.md` and `docs/USER_GUIDE.md` in sync.
 - Keep `supertext/src/Api` and `FieldPlanner` free of PrestaShop classes (unit tests run without PrestaShop).
-- User-visible strings use the translation domain `Modules.Supertext.Admin`.
+- User-visible strings use the translation domain `Modules.Supertext.Admin`, translated in `supertext/translations/{de-DE,fr-FR,it-IT}/ModulesSupertextAdmin.*.xlf` (English is the source); run `php tools/sync-translations.php` for the regional copies. `tests/Unit/TranslationFilesTest.php` checks they are complete.
 - `demo/` is the Railway demo (service *PrestaShop* in *supertext-cms-demos-php*, building `demo/Dockerfile` with context = repo root; set on the service, Railway ignores `railway.json`). `demo/setup.php` seeds languages, sample content and accounts. Demo secrets live only in Railway variables. Don't export-ignore `demo/` or `supertext/` in `.gitattributes`: Railway builds from a `git archive` snapshot.
 - PrestaShop 9 installer quirks the demo depends on: it must run from the web root, it expects the admin folder to be `admin` or `admin-dev`, and `--country` must be upper case (`CH`), or it installs the country's languages and fails.

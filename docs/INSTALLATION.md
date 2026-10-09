@@ -86,6 +86,10 @@ Employees whose profile may **edit** the item: *Catalog → Products* for produc
 
 The **Translate with Supertext** button on the product page (*Modules* tab) is shown to profiles with **view** permission on the module. Installing the module grants it to every profile; you can change that under *Advanced Parameters → Team → Permissions → Modules*. Only SuperAdmins can configure the module.
 
+## Interface languages
+
+The module's screens (settings page, *Translate with Supertext* page, list actions, product page box and messages) are available in English, German, French and Italian. They follow the employee's back-office language: each employee chooses it under *Your profile* (avatar at the top right → *Your profile* → *Language*). The translations ship with the module (`supertext/translations/<locale>/`) for de-DE, de-AT, de-CH, fr-FR, fr-BE, fr-CA, fr-CH, it-IT and it-CH; other locales show English. Wordings changed under *International → Translations* (*Installed modules translations*, module *Supertext Translation*) take precedence.
+
 ## All settings
 
 | Setting | Default | Purpose |

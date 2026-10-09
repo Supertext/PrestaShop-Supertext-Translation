@@ -106,7 +106,7 @@ class TranslateController extends FrameworkBundleAdminController
         $overwrite = $request->request->getBoolean('overwrite');
 
         if (!isset(EntityTypes::TYPES[$type]) || $id <= 0) {
-            return $this->json(['ok' => false, 'message' => 'Invalid request.'], 400);
+            return $this->json(['ok' => false, 'message' => $this->t('Invalid request.')], 400);
         }
 
         if (!self::canEdit(EntityTypes::get($type)['tab'])) {
@@ -134,7 +134,7 @@ class TranslateController extends FrameworkBundleAdminController
         } catch (SupertextException|\PrestaShopException $e) {
             \PrestaShopLogger::addLog('Supertext: ' . $e->getMessage(), 2, null, EntityTypes::get($type)['class'], $id, true);
 
-            return $this->json(['ok' => false, 'message' => $e->getMessage()]);
+            return $this->json(['ok' => false, 'message' => $e instanceof SupertextException ? $this->errorMessage($e) : $e->getMessage()]);
         }
 
         $kept = \count($result['kept']);
@@ -166,6 +166,14 @@ class TranslateController extends FrameworkBundleAdminController
             'cms'      => $this->t('Pages'),
             default    => $this->t('Products'),
         };
+    }
+
+    /** The exception's message in the employee's language; Supertext's own detail stays as sent. */
+    private function errorMessage(SupertextException $e): string
+    {
+        $message = $this->t($e->template(), $e->parameters());
+
+        return $e->detail() !== '' ? $message . ' (' . $e->detail() . ')' : $message;
     }
 
     /** @param array<string, mixed> $parameters */

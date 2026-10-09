@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Added: French and Italian interface (and German, which was missing). The module's screens and messages, including errors from Supertext, follow the employee's back-office language (translations shipped for de-DE, de-AT, de-CH, fr-FR, fr-BE, fr-CA, fr-CH, it-IT, it-CH).
 - Demo: the public host name comes from `PRESTASHOP_DOMAIN` (or Railway's domain) instead of `PS_DOMAIN`, which the base image sets to a placeholder; the demo now runs on Railway.
 
 ## 0.1.0 — 2026-10-08

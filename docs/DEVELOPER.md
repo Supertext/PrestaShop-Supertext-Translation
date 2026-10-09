@@ -28,7 +28,17 @@ supertext/
     ├── configure.tpl                     settings page (Smarty, legacy AdminModules controller)
     ├── translate.html.twig               translate page (Twig, Symfony controller) and its script
     └── product-extra.tpl                 the box in the product page's Modules tab
+supertext/translations/<locale>/ModulesSupertextAdmin.<locale>.xlf   German, French, Italian UI strings
+tools/sync-translations.php               writes the regional copies (de-CH, fr-CH, it-CH, …)
 ```
+
+### Interface strings
+
+Every user-visible string uses the domain `Modules.Supertext.Admin`: `$this->trans()` in `supertext.php`, `{l s='…' d='Modules.Supertext.Admin'}` in Smarty, `'…'|trans({}, d)` in Twig, `$this->t()` in the controller. English is the source; PrestaShop loads `translations/<locale>/ModulesSupertextAdmin.<locale>.xlf` for the employee's exact locale (no fallback from de-CH to de-DE). So:
+
+- Edit `de-DE`, `fr-FR` and `it-IT` by hand (formal address: Sie, vous, Lei; PrestaShop's own terms, e.g. *Artikel*, *Catalogue → Produits*, *Apparence → Pages*; never translate "Supertext", `%placeholders%` or URLs), then run `php tools/sync-translations.php` to write de-AT, de-CH (ß → ss), fr-BE, fr-CA, fr-CH and it-CH.
+- A new or changed string goes into all three files in the same commit. `tests/Unit/TranslationFilesTest.php` scans the module's PHP, Smarty and Twig files and fails if a string is missing, unused, has different placeholders, or a regional copy is out of date.
+- `SupertextException` keeps its English template and `%placeholders%` (`template()`, `parameters()`) apart from Supertext's own detail (`detail()`), so the back office translates API errors; `src/Api` still has no PrestaShop classes. The CLI command prints English.
 
 Entry points:
 
@@ -108,7 +118,7 @@ To translate without a Supertext key, run the stand-in API (`node tests/docs/sta
 
 ```bash
 composer install
-composer test        # PHPUnit: API client, HTML document, field planner, entity types (no PrestaShop needed)
+composer test        # PHPUnit: API client, HTML document, field planner, entity types, translation files (no PrestaShop needed)
 ./build.sh           # dist/supertext-<version>.zip
 ```
 
@@ -191,7 +201,7 @@ The release attaches `supertext-X.Y.Z.zip`, built by `./build.sh` (module folder
 
 - PrestaShop module structure: main class in `supertext.php`, PSR-4 classes in `src/` (`Supertext\PrestaShop\…`), Symfony routes and services in `config/`.
 - Keep `src/Api` and `FieldPlanner` free of PrestaShop classes so they stay unit-testable.
-- User-visible strings use the domain `Modules.Supertext.Admin` (new translation system); messages from the API client are English.
+- User-visible strings use the domain `Modules.Supertext.Admin` (new translation system), with German, French and Italian in `supertext/translations/` (see *Interface strings*); the API client's messages are English templates that the back office translates.
 - Keep the three docs in `docs/` current with every change (see `CLAUDE.md`).
 
 ## Known limitations / roadmap
