@@ -125,6 +125,7 @@ composer test        # PHPUnit: API client, HTML document, field planner, entity
 CI (`.github/workflows/ci.yml`):
 
 - **unit** (PHP 8.1, 8.3, 8.4): lint, PHPUnit, `sh -n demo/entrypoint.sh`, `./build.sh`.
+- **phpstan**: PHPStan on the module's code with the PrestaShop 9 sources (see *Code quality and security checks*).
 - **prestashop**: installs PrestaShop 9 in Docker, installs the built zip, runs `demo/setup.php` twice (the second run must change nothing, and no password may appear in the log), translates the sample product, category and page with `supertext:translate` against the stand-in API and checks the German and French rows, slug included; a second run must skip everything.
 
 ## Demo (Railway)
@@ -186,11 +187,32 @@ BASE_URL=http://localhost:8090/admin-dev DEMO_ADMIN_EMAIL=… DEMO_ADMIN_PASSWOR
 
 Run it in the same commit as any UI change the images show.
 
+## Code quality and security checks
+
+Before starting work in this repo, look at its open findings: code scanning alerts, secret scanning alerts, Dependabot PRs and the "Broken links in the docs" issue.
+
+- **Checks** (`.github/workflows/checks.yml`): actionlint and zizmor lint the workflows on every push and pull request; dependency review fails a pull request that adds a package with a known vulnerability (moderate or worse). Third-party actions are pinned to commit SHAs (Dependabot keeps them current).
+- **Links** (`.github/workflows/links.yml`): lychee checks the links in all Markdown files weekly and when docs change on `main`. Broken links open (or update) the issue "Broken links in the docs"; links that can't work from CI go in `.lycheeignore` (one regex per line).
+- **PHPStan** (job **phpstan** in `ci.yml`, configuration `phpstan.neon`): level 5 on `supertext/supertext.php` and `supertext/src/` (not `demo/` or the tests). PHPStan has to know PrestaShop's classes, so `tests/phpstan/bootstrap.php` loads the autoloaders of a PrestaShop 9 installation given in `PS_ROOT_DIR`; CI copies the sources out of the `prestashop/prestashop:9` image. Locally:
+
+  ```bash
+  docker create --name ps prestashop/prestashop:9
+  mkdir -p /tmp/prestashop && docker export ps | tar -x -C /tmp/prestashop --strip-components=3 \
+    var/www/html/autoload.php var/www/html/app var/www/html/classes var/www/html/config \
+    var/www/html/controllers var/www/html/src var/www/html/vendor
+  docker rm ps
+  composer install
+  PS_ROOT_DIR=/tmp/prestashop vendor/bin/phpstan analyse --memory-limit=1G
+  ```
+
+  Known findings that aren't fixed yet go in `phpstan-baseline.neon` (`vendor/bin/phpstan analyse --generate-baseline`); it is empty now, so keep it that way and fix new findings instead.
+- **GitHub settings** (set by Remy's setup script, not in the repo): secret scanning with push protection (a push containing a known token format is rejected; findings under *Security → Secret scanning*) and CodeQL default setup (findings under *Security → Code scanning* and as pull request comments). CodeQL doesn't cover PHP, which is why this repo runs PHPStan.
+
 ## Releasing
 
 Releases are published by `.github/workflows/release.yml` when the version is officially bumped; nobody tags or creates releases by hand.
 
-1. Check that `composer test` and `./build.sh` pass.
+1. Check that `composer test`, PHPStan and `./build.sh` pass.
 2. Move the *Unreleased* entries in `CHANGELOG.md` under a new `## X.Y.Z — YYYY-MM-DD` section, and keep an empty *Unreleased* above it.
 3. Set the same version in `supertext/supertext.php` (`$this->version`). PrestaShop shows it in the Module Manager, and the module's settings page links it to the GitHub release.
 4. Push to `main`. The workflow checks that the version file matches `CHANGELOG.md`, then tags `vX.Y.Z` and creates the GitHub release with the CHANGELOG section as notes (0.x versions as pre-releases). A push that adds no new version does nothing, and a version that is already released is skipped. After fixing a failed run, start it again with *Run workflow* on the *Release* workflow.

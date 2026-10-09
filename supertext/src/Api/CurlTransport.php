@@ -108,7 +108,7 @@ final class CurlTransport
         // $http_response_header is deprecated as of PHP 8.5.
         $lines = \function_exists('http_get_last_response_headers')
             ? (http_get_last_response_headers() ?? [])
-            : ($http_response_header ?? []);
+            : $http_response_header;
 
         foreach ($lines as $line) {
             if (preg_match('#^HTTP/\S+\s+(\d{3})#', $line, $m)) {

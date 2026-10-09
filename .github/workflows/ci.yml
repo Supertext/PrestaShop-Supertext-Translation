@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   unit:
     runs-on: ubuntu-latest
@@ -13,8 +16,10 @@ jobs:
       matrix:
         php: ['8.1', '8.3', '8.4']
     steps:
-      - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: ${{ matrix.php }}
           coverage: none
@@ -25,6 +30,30 @@ jobs:
       - name: Demo entrypoint syntax
         run: sh -n demo/entrypoint.sh
       - run: ./build.sh
+
+  # PHPStan on the module's code, with the PrestaShop 9 sources (from the same image as
+  # the prestashop job) so it knows PrestaShop's classes. See phpstan.neon.
+  phpstan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.3'
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - name: PrestaShop 9 sources
+        run: |
+          docker create --name ps prestashop/prestashop:9
+          mkdir -p "$RUNNER_TEMP/prestashop"
+          docker export ps | tar -x -C "$RUNNER_TEMP/prestashop" --strip-components=3 \
+            var/www/html/autoload.php var/www/html/app var/www/html/classes var/www/html/config \
+            var/www/html/controllers var/www/html/src var/www/html/vendor
+          docker rm ps
+      - name: PHPStan
+        run: PS_ROOT_DIR="$RUNNER_TEMP/prestashop" vendor/bin/phpstan analyse --no-progress --error-format=github --memory-limit=1G
 
   # Installs PrestaShop 9 like the demo does, installs the built module, runs the demo
   # setup twice, then translates the sample content against the stand-in API.
@@ -38,8 +67,10 @@ jobs:
       DEMO_EDITOR_EMAIL: editor@example.com
       DEMO_EDITOR_PASSWORD: Ci-Editor-Chocolate-2026!
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
       - name: Build the module
@@ -57,7 +88,7 @@ jobs:
             "$PS_IMAGE"
           # Wait for the installer. The 9.x image may exit after installing (it tries to remove an
           # install folder the installer already removed); then just start it again.
-          for i in $(seq 1 120); do
+          for _ in $(seq 1 120); do
             if [ "$(docker inspect -f '{{.State.Running}}' ps)" != "true" ]; then docker start ps; fi
             if curl -fsS -o /dev/null http://localhost/ 2>/dev/null; then break; fi
             sleep 5
@@ -72,8 +103,8 @@ jobs:
           run() { docker exec -e DEMO_ADMIN_EMAIL -e DEMO_ADMIN_PASSWORD -e DEMO_EDITOR_EMAIL -e DEMO_EDITOR_PASSWORD -e PS_FOLDER_ADMIN=admin-ci ps runuser -u www-data --preserve-environment -- "$@"; }
           run php /opt/demo/setup.php --remove-employee=installer@example.com | tee setup1.log
           run php /opt/demo/setup.php | tee setup2.log
-          ! grep -E 'added|created' setup2.log
-          ! grep -F "$DEMO_ADMIN_PASSWORD" setup1.log
+          if grep -E 'added|created' setup2.log; then exit 1; fi
+          if grep -qF "$DEMO_ADMIN_PASSWORD" setup1.log; then echo "Password in the setup log" >&2; exit 1; fi
       - name: Translate the sample content
         run: |
           q() { docker exec db mariadb -uroot -padmin prestashop -N -e "$1"; }

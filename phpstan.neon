@@ -1,0 +1,14 @@
+# PHPStan for the module's own code. PrestaShop's classes come from a PrestaShop 9
+# installation (PS_ROOT_DIR, see tests/phpstan/bootstrap.php).
+# See docs/DEVELOPER.md → Code quality and security checks.
+includes:
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+    paths:
+        - supertext/supertext.php
+        - supertext/src
+    bootstrapFiles:
+        - tests/phpstan/bootstrap.php
+    tmpDir: .phpstan-cache

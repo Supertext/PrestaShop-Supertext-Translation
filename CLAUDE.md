@@ -42,10 +42,16 @@ Every Supertext plugin repo has, and a new one gets from the start:
 - `LICENSE` matching the license its manifest declares (`composer.json`, `package.json`, `pyproject.toml`, `.csproj`, plugin header).
 - `SECURITY.md`: report vulnerabilities privately through GitHub's private vulnerability reporting or support@supertext.com, never in public issues.
 - `.github/dependabot.yml`: weekly updates for its package ecosystem and GitHub Actions, minor and patch updates grouped into one pull request.
-- On GitHub: the About box filled in (one-sentence description, website https://www.supertext.com, topics), `main` protected against force-pushes and deletion, Wiki and Projects off, Dependabot alerts and private vulnerability reporting on, and the Supertext social preview image.
+- `.github/workflows/checks.yml` (actionlint + zizmor on every push and PR, dependency review on PRs) and `.github/workflows/links.yml` (lychee weekly and on docs changes; broken links open the issue "Broken links in the docs"). Third-party actions are pinned to commit SHAs.
+- PHP repos: PHPStan in CI (`phpstan.neon`, baseline in `phpstan-baseline.neon`).
+- On GitHub: the About box filled in (one-sentence description, website https://www.supertext.com, topics), `main` protected against force-pushes and deletion, Wiki and Projects off, Dependabot alerts and private vulnerability reporting on, secret scanning with push protection and CodeQL default setup on, and the Supertext social preview image.
 - A row in the plugin list (see *Plugin list*) and in the org profile (`Supertext/.github` → `profile/README.md`).
 
 Claude sessions can't change GitHub repo settings (HTTP 403): add a new repo to Remy's setup script (`set-github-about`) instead of trying.
+
+## Checks and alerts (always)
+
+Before starting work in a repo, look at its open findings and fix what the task touches or what is quick: code scanning alerts (`gh api 'repos/Supertext/<Repo>/code-scanning/alerts?state=open'`), secret scanning alerts (`…/secret-scanning/alerts?state=open`), open Dependabot PRs and the issue "Broken links in the docs". New workflows and workflow changes must pass actionlint and zizmor; PHP code must pass PHPStan at the repo's level. See `docs/DEVELOPER.md` → *Code quality and security checks*.
 
 ## Demo accounts rule (always)
 
@@ -76,7 +82,7 @@ Lessons from the live API, apply them here: header `Authorization: Supertext-Aut
 
 ## This repo
 
-- Before committing: `composer test`, PHP lint, `./build.sh`. CI also installs PrestaShop 9 in Docker and translates the demo content against the stand-in.
+- Before committing: `composer test`, PHP lint, PHPStan (`docs/DEVELOPER.md` → *Code quality and security checks*), `./build.sh`. CI also installs PrestaShop 9 in Docker and translates the demo content against the stand-in.
 - Test UI changes in a local PrestaShop with the module mounted (see `docs/DEVELOPER.md` → Local development) and regenerate the screenshots they affect (`tests/docs/screenshots.mjs`).
 - New settings go in `supertext/src/Settings.php`, `views/templates/admin/configure.tpl` **and** the settings table in `docs/INSTALLATION.md`.
 - Translated fields live in `supertext/src/Translation/EntityTypes.php`; keep "What is translated" in `docs/DEVELOPER.md` and `docs/USER_GUIDE.md` in sync.
