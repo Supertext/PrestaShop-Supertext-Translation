@@ -64,7 +64,7 @@ final class EntityTranslator
         $translatedHtml = $this->client->translateDocument(
             $planner->document(),
             Settings::targetCode($target),
-            (string) $source->iso_code,
+            Settings::sourceCode($source),
             Settings::tone($targetId),
         );
 

@@ -75,7 +75,7 @@ Multistore: the item is loaded and saved in the current shop context (the back o
 
 AI file translation API v1, same as the WordPress, Joomla and other Supertext plugins (`src/Api/SupertextClient.php`):
 
-1. `POST {base}/translate/ai/file` — multipart: `file` (`content.html`, part `Content-Type: text/html` exactly, or the API answers 415), `target_lang` (e.g. `de-CH`), `source_lang` (primary subtag only, e.g. `en`; a full tag is rejected with `INVALID_LANGUAGE_PAIR`), optional `politeness` (`more` formal, `less` informal). Answers `{"file_id": "…"}`.
+1. `POST {base}/translate/ai/file` — multipart: `file` (`content.html`, part `Content-Type: text/html` exactly, or the API answers 415), `target_lang` (e.g. `de-CH`), `source_lang` (bare language, e.g. `en`; see *Language codes*), optional `politeness` (`more` formal, `less` informal). Answers `{"file_id": "…"}`.
 2. `GET {base}/translate/ai/file/{id}/status` every 2 s until `done` (or `error`, `limit_exceeded`, `deleted`), up to the timeout (default 180 s).
 3. `GET {base}/translate/ai/file/{id}/translation` — the translated HTML.
 4. `DELETE {base}/translate/ai/file/{id}` — always, also after errors.
@@ -85,6 +85,16 @@ AI file translation API v1, same as the WordPress, Joomla and other Supertext pl
 - HTTP 429 (`RATE_LIMIT_EXCEEDED`, per second per key) is retried up to 4 times, after `Retry-After` or 1/2/4/8 s with jitter.
 - *Test connection* calls `GET {base}/features` (free).
 - Documents stay below 900,000 characters (API limit 1,000,000).
+
+### Language codes
+
+Supertext rejects a bare target (`de`) and a regional source (`en-GB`) with `INVALID_LANGUAGE_PAIR`. `src/Api/LanguageCodes.php` (unit-tested, no PrestaShop classes) makes the codes:
+
+- **Source:** the bare language of the language's Supertext code override, else of its locale: `en-US`, `en_GB` → `en`. The locale is used, not `iso_code`: PrestaShop gives some languages country-like ISO codes (`gb` for en-GB, `br` for pt-BR, `mx` for es-MX).
+- **Target:** the override, else the locale (`locale`, then `language_code`, then `iso_code`), normalized (`de_ch` → `de-CH`; scripts and numeric regions keep their form: `zh-Hant`, `es-419`). A code without a region gets a default: ar-SA, bg-BG, cs-CZ, da-DK, de-DE, el-GR, en-US, es-ES, et-EE, fi-FI, fr-FR, hr-HR, hu-HU, it-IT, ja-JP, ko-KR, lt-LT, lv-LV, nb-NO, nl-NL, pl-PL, pt-PT, ro-RO, ru-RU, sk-SK, sl-SI, sr-RS, sv-SE, th-TH, tr-TR, uk-UA, vi-VN, zh-CN (same table in every Supertext plugin). Unknown bare codes are sent unchanged, so Supertext's error names them.
+- Translating within one language (source `en`, target `en-GB`) is allowed.
+
+The stand-in (`tests/docs/stand-in.mjs`) rejects bare targets and regional sources like the live API.
 
 ## Local development
 

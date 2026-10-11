@@ -63,9 +63,9 @@ When you add a language, PrestaShop copies the default language's texts into it.
 
 ### Language codes and tone
 
-By default the language's **locale** (e.g. `de-CH`, `fr-CH`) is sent to Supertext as the target language. In the module settings' **Languages** panel you can, per language:
+By default the language's **locale** (e.g. `de-CH`, `fr-CH`) is sent to Supertext as the target language. Supertext needs a region in the target language, so a locale without one gets a regional default (`de` → `de-DE`, `en` → `en-US`, `fr` → `fr-FR`, `pt` → `pt-PT`, …). As source language only the language is sent (`en-GB` → `en`). In the module settings' **Languages** panel you can, per language:
 
-- send a **different code**, e.g. `fr-CH` for a language whose locale is `fr-FR`, and
+- send a **different code**, e.g. `fr-CH` for a language whose locale is `fr-FR` (a code without a region gets the same regional default; as source, only its language counts), and
 - choose the **tone**: *Formal (Sie, vous)*, *Informal (du, tu)* or the Supertext default.
 
 <img src="images/module-languages.png" alt="Languages panel of the module settings: English, Deutsch (Schweiz), Français (Suisse) and Italiano (Svizzera) with their locales, an empty Supertext language code field each and the tone; German is set to Formal (Sie, vous)" width="720">

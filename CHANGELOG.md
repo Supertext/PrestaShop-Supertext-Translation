@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Fixed: target languages without a region (e.g. a locale `de`) are now sent as `de-DE` (Supertext rejects bare targets), and the source language is taken from the locale instead of PrestaShop's ISO code, which is country-like for some languages (`gb` for English (UK)).
 - Added: French and Italian interface (and German, which was missing). The module's screens and messages, including errors from Supertext, follow the employee's back-office language (translations shipped for de-DE, de-AT, de-CH, fr-FR, fr-BE, fr-CA, fr-CH, it-IT, it-CH).
 - Demo: the public host name comes from `PRESTASHOP_DOMAIN` (or Railway's domain) instead of `PS_DOMAIN`, which the base image sets to a placeholder; the demo now runs on Railway.
 

@@ -9,6 +9,7 @@
 namespace Supertext\PrestaShop;
 
 use Supertext\PrestaShop\Api\CurlTransport;
+use Supertext\PrestaShop\Api\LanguageCodes;
 use Supertext\PrestaShop\Api\SupertextClient;
 
 /**
@@ -95,18 +96,22 @@ final class Settings
         \Configuration::updateGlobalValue(self::LANGUAGES, json_encode($languages, JSON_UNESCAPED_SLASHES));
     }
 
-    /** The code sent to Supertext as target language: the override, else the language's locale (de-CH). */
+    /** The code sent to Supertext as target language: the override, else the language's locale, always with a region (de → de-DE). */
     public static function targetCode(\Language $language): string
     {
-        $override = self::languages()[(int) $language->id]['code'] ?? '';
+        return LanguageCodes::target(self::localeOf($language), self::languages()[(int) $language->id]['code'] ?? '');
+    }
 
-        if ($override !== '') {
-            return $override;
-        }
+    /** The code sent to Supertext as source language: the bare language of the override or locale (en-GB → en). */
+    public static function sourceCode(\Language $language): string
+    {
+        return LanguageCodes::source(self::localeOf($language), self::languages()[(int) $language->id]['code'] ?? '');
+    }
 
-        $locale = (string) ($language->locale ?: $language->language_code ?: $language->iso_code);
-
-        return self::formatTag($locale);
+    /** The language's locale (en-GB). Not iso_code: PrestaShop uses country-like iso codes for some languages (gb, br, mx). */
+    private static function localeOf(\Language $language): string
+    {
+        return (string) ($language->locale ?: $language->language_code ?: $language->iso_code);
     }
 
     public static function tone(int $idLang): string
@@ -117,14 +122,7 @@ final class Settings
     /** "de-ch" or "de_CH" → "de-CH" */
     public static function formatTag(string $tag): string
     {
-        $parts = preg_split('/[-_]/', trim($tag)) ?: [];
-        $out   = [strtolower((string) array_shift($parts))];
-
-        foreach ($parts as $part) {
-            $out[] = \strlen($part) === 2 ? strtoupper($part) : ucfirst(strtolower($part));
-        }
-
-        return implode('-', array_filter($out, static fn (string $part): bool => $part !== ''));
+        return LanguageCodes::format($tag);
     }
 
     public static function client(): SupertextClient

@@ -118,7 +118,7 @@ class Supertext extends Module
             $languages[] = [
                 'id'          => $id,
                 'name'        => $language['name'],
-                'locale'      => Settings::formatTag((string) ($language['locale'] ?: $language['language_code'])),
+                'locale'      => \Supertext\PrestaShop\Api\LanguageCodes::target((string) ($language['locale'] ?: $language['language_code'])),
                 'code'        => $saved[$id]['code'] ?? '',
                 'tone'        => $saved[$id]['tone'] ?? 'default',
                 'isDefault'   => $id === (int) Configuration::get('PS_LANG_DEFAULT'),
