@@ -15,6 +15,7 @@ supertext/
 │   ├── Api/                              no PrestaShop classes (unit-tested on their own)
 │   │   ├── SupertextClient.php           Supertext AI file translation API v1
 │   │   ├── HtmlDocument.php              fields ⇄ one HTML document with data-st-id elements
+│   │   ├── LanguageCodes.php             language tags → Supertext source and target codes
 │   │   ├── CurlTransport.php             HTTP via cURL (or streams), honours HTTPS_PROXY
 │   │   └── SupertextException.php
 │   ├── Translation/
