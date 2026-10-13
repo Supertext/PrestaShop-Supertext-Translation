@@ -298,6 +298,10 @@
         <source>The document was deleted at Supertext before it could be downloaded.</source>
         <target>Il documento è stato eliminato da Supertext prima che potesse essere scaricato.</target>
       </trans-unit>
+      <trans-unit id="ee88d6f7e5e5ee4303b40e0fa7ed8f16">
+        <source>Supertext does not support this language pair (%source% → %target%). Check the Supertext language code in the module settings.</source>
+        <target>Supertext non supporta questa coppia di lingue (%source% → %target%). Verifichi il codice lingua Supertext nelle impostazioni del modulo.</target>
+      </trans-unit>
       <trans-unit id="4a3a68713ce55d74de42b709c5df01e8">
         <source>The requested Supertext resource was not found.</source>
         <target>La risorsa Supertext richiesta non è stata trovata.</target>

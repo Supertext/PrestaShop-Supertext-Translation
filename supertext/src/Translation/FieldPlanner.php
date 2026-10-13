@@ -8,7 +8,8 @@
 
 namespace Supertext\PrestaShop\Translation;
 
-use Supertext\PrestaShop\Api\HtmlDocument;
+use Supertext\PrestaShop\Sdk\HtmlDocument;
+use Supertext\PrestaShop\Sdk\Segment;
 
 /**
  * Decides which fields of one item go to Supertext and what is written back.
@@ -92,13 +93,24 @@ final class FieldPlanner
     /** The document to send: one data-st-id element per field. */
     public function document(): string
     {
+        return HtmlDocument::build($this->segments());
+    }
+
+    /**
+     * The fields to send as Supertext SDK segments, in the order of toTranslate().
+     *
+     * @return list<Segment>
+     */
+    private function segments(): array
+    {
         $segments = [];
 
-        foreach ($this->toTranslate() as $i => $field) {
-            $segments[$i] = ['text' => (string) $this->source[$field], 'html' => $this->fields[$field]['html']];
+        foreach ($this->toTranslate() as $field) {
+            $text       = (string) $this->source[$field];
+            $segments[] = $this->fields[$field]['html'] ? Segment::html($text) : Segment::text($text);
         }
 
-        return HtmlDocument::build($segments);
+        return $segments;
     }
 
     /**
@@ -109,13 +121,7 @@ final class FieldPlanner
     public function apply(string $translatedHtml): array
     {
         $send   = $this->toTranslate();
-        $isHtml = [];
-
-        foreach ($send as $i => $field) {
-            $isHtml[$i] = $this->fields[$field]['html'];
-        }
-
-        $parsed = HtmlDocument::parse($translatedHtml, $isHtml);
+        $parsed = HtmlDocument::parse($translatedHtml, $this->segments());
         $values = [];
 
         foreach ($send as $i => $field) {

@@ -8,9 +8,9 @@
 
 namespace Supertext\PrestaShop;
 
-use Supertext\PrestaShop\Api\CurlTransport;
 use Supertext\PrestaShop\Api\LanguageCodes;
 use Supertext\PrestaShop\Api\SupertextClient;
+use Supertext\PrestaShop\Sdk\Http\CurlTransport;
 
 /**
  * The module's settings (PrestaShop configuration table), with the environment variables

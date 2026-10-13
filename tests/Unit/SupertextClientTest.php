@@ -160,6 +160,19 @@ final class SupertextClientTest extends TestCase
         $client->validateApiKey();
     }
 
+    public function testReportsAnUnsupportedLanguagePair(): void
+    {
+        $client = $this->client(fn () => ['status' => 404, 'body' => '{"error_code":"INVALID_LANGUAGE_PAIR","source_lang":"en","target_lang":"xx-YY"}']);
+
+        try {
+            $client->translateDocument('<p>x</p>', 'xx-YY', 'en');
+            self::fail('Expected an exception');
+        } catch (SupertextException $e) {
+            self::assertSame('Supertext does not support this language pair (%source% → %target%). Check the Supertext language code in the module settings.', $e->template());
+            self::assertSame(['%source%' => 'en', '%target%' => 'xx-YY'], $e->parameters());
+        }
+    }
+
     public function testEnvironments(): void
     {
         self::assertSame(SupertextClient::LIVE, SupertextClient::baseUrlFor('live'));

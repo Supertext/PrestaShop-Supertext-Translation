@@ -13,6 +13,7 @@
     "autoload-dev": {
         "psr-4": {
             "Supertext\\PrestaShop\\": "supertext/src/",
+            "Supertext\\PrestaShop\\Sdk\\": "supertext/lib/supertext-sdk/src/",
             "Supertext\\PrestaShop\\Tests\\": "tests/"
         }
     },

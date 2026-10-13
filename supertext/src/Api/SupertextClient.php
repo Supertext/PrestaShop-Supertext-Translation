@@ -8,54 +8,66 @@
 
 namespace Supertext\PrestaShop\Api;
 
+use Supertext\PrestaShop\Sdk\Client;
+use Supertext\PrestaShop\Sdk\Http\HttpTransport;
+use Supertext\PrestaShop\Sdk\Supertext;
+use Supertext\PrestaShop\Sdk\SupertextException as SdkException;
+
 /**
- * Supertext AI file translation API v1 (https://api.supertext.com/v1/).
+ * Supertext AI file translation API v1 (https://api.supertext.com/v1/), through the
+ * Supertext PHP SDK bundled in lib/supertext-sdk (namespace Supertext\PrestaShop\Sdk).
  *
- * Same protocol as the Supertext WordPress, Drupal, TYPO3, Strapi and Payload plugins:
- * submit one HTML document, poll its status, download the translation, delete the file.
+ * The SDK does the protocol (upload one HTML document, poll its status, download the
+ * translation, delete the file), the auth header, HTTP 429 retries and language codes.
+ * This class keeps the module's interface and turns SDK errors into this module's
+ * SupertextException, whose English template the back office translates
+ * (domain Modules.Supertext.Admin).
  *
- * Has no PrestaShop dependencies: HTTP goes through a transport callable so it can be tested
- * with a fake and used outside PrestaShop.
+ * Has no PrestaShop dependencies.
  */
 final class SupertextClient
 {
-    public const LIVE = 'https://api.supertext.com/v1/';
+    public const LIVE = Supertext::LIVE_BASE_URL;
     public const STAGING = 'https://api.staging.supertext.com/v1/';
     public const TESTING = 'https://api.testing.supertext.com/v1/';
 
-    /** Stay well below the API's 1,000,000 character limit per document. */
-    public const MAX_DOCUMENT_CHARACTERS = 900000;
-
-    /** Retries after HTTP 429: the API limits requests per second per key. */
-    public const RATE_LIMIT_RETRIES = 4;
-
-    private string $apiKey;
-    private string $baseUrl;
-
-    /** @var callable(string, string, array<string, string>, ?string): array{status: int, body: string, headers: array<string, string>} */
-    private $transport;
-
-    /** @var callable(float): void */
-    private $sleep;
+    private readonly Client $sdk;
+    private readonly string $apiKey;
 
     /**
-     * @param callable(string $method, string $url, array<string, string> $headers, ?string $body): array{status: int, body: string, headers: array<string, string>} $transport
-     * @param callable(float $seconds): void|null $sleep
+     * @param HttpTransport|callable(string $method, string $url, array<string, string> $headers, ?string $body): array{status: int, body: string, headers?: array<string, string>} $transport
+     * @param callable(float $seconds): void|null $sleep tests: the SDK's clock then counts the slept time
      */
     public function __construct(
         string $apiKey,
         string $baseUrl,
-        callable $transport,
+        HttpTransport|callable $transport,
         private readonly int $pollTimeout = 180,
-        private readonly float $pollInterval = 2.0,
+        float $pollInterval = 2.0,
         ?callable $sleep = null,
     ) {
-        $this->apiKey    = self::normalizeKey($apiKey);
-        $this->baseUrl   = rtrim($baseUrl !== '' ? $baseUrl : self::LIVE, '/') . '/';
-        $this->transport = $transport;
-        $this->sleep     = $sleep ?? static function (float $seconds): void {
-            usleep((int) round($seconds * 1000000));
+        $this->apiKey = self::normalizeKey($apiKey);
+
+        $elapsed = 0.0;
+        $sdkSleep = $sleep === null ? null : static function (float $seconds) use ($sleep, &$elapsed): void {
+            $elapsed += $seconds;
+            $sleep($seconds);
         };
+        $clock = $sleep === null ? null : static function () use (&$elapsed): float {
+            return $elapsed;
+        };
+
+        $this->sdk = new Client(
+            $this->apiKey,
+            baseUrl: $baseUrl !== '' ? $baseUrl : self::LIVE,
+            pollInterval: $pollInterval,
+            timeout: (float) $pollTimeout,
+            requestTimeout: 60.0,
+            userAgent: 'PrestaShop-Supertext-Translation',
+            transport: $transport instanceof HttpTransport ? $transport : new CallableTransport($transport),
+            sleep: $sdkSleep,
+            clock: $clock,
+        );
     }
 
     /** Supertext shows the key as "Supertext-Auth-Key <key>"; accept it with or without that prefix. */
@@ -85,184 +97,80 @@ final class SupertextClient
     /**
      * Translates a complete HTML document and returns the translated HTML.
      *
-     * @param string $targetLanguage BCP-47 code, e.g. "de-CH"; a bare "de" is sent as "de-DE"
-     * @param string $sourceLanguage any form ("en-GB"); only the primary subtag is sent. Empty: auto-detect.
+     * @param string $targetLanguage any form; sent as a regional code ("de" → "de-DE")
+     * @param string $sourceLanguage any form ("en-GB"); sent as the bare language. Empty: auto-detect.
      * @param string $politeness     "default", "more" (formal) or "less" (informal)
      */
     public function translateDocument(string $html, string $targetLanguage, string $sourceLanguage = '', string $politeness = 'default'): string
-    {
-        $fileId = $this->submit($html, $targetLanguage, $sourceLanguage, $politeness);
-
-        try {
-            $this->waitUntilDone($fileId);
-
-            return $this->download($fileId);
-        } finally {
-            try {
-                $this->request('DELETE', 'translate/ai/file/' . rawurlencode($fileId));
-            } catch (\Throwable) {
-                // Files expire after 24 hours anyway.
-            }
-        }
-    }
-
-    /** Cost-free check that the key is accepted. */
-    public function validateApiKey(): void
-    {
-        $this->request('GET', 'features');
-    }
-
-    private function submit(string $html, string $targetLanguage, string $sourceLanguage, string $politeness): string
-    {
-        $fields = ['target_lang' => LanguageCodes::target($targetLanguage)];
-        $source = LanguageCodes::source($sourceLanguage);
-
-        if ($source !== '') {
-            // A full tag such as "en-GB" as source is rejected with INVALID_LANGUAGE_PAIR.
-            $fields['source_lang'] = $source;
-        }
-
-        if (\in_array($politeness, ['more', 'less'], true)) {
-            $fields['politeness'] = $politeness;
-        }
-
-        $boundary = '----supertext' . bin2hex(random_bytes(12));
-        $body     = '';
-
-        foreach ($fields as $name => $value) {
-            $body .= "--{$boundary}\r\nContent-Disposition: form-data; name=\"{$name}\"\r\n\r\n{$value}\r\n";
-        }
-
-        // The part's Content-Type must be exactly "text/html" (no charset), or the API answers 415.
-        $body .= "--{$boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"content.html\"\r\n"
-            . "Content-Type: text/html\r\n\r\n{$html}\r\n--{$boundary}--\r\n";
-
-        $data   = $this->json($this->request('POST', 'translate/ai/file', $body, 'multipart/form-data; boundary=' . $boundary));
-        $fileId = (string) ($data['file_id'] ?? '');
-
-        if ($fileId === '') {
-            throw new SupertextException('Supertext did not return a file id.');
-        }
-
-        return $fileId;
-    }
-
-    private function waitUntilDone(string $fileId): void
     {
         if (\function_exists('set_time_limit')) {
             @set_time_limit($this->pollTimeout + 60);
         }
 
-        $deadline = microtime(true) + $this->pollTimeout;
-
-        do {
-            $status = (string) ($this->json($this->request('GET', 'translate/ai/file/' . rawurlencode($fileId) . '/status'))['status'] ?? '');
-
-            switch ($status) {
-                case 'done':
-                    return;
-                case 'error':
-                    throw new SupertextException('Supertext could not translate the document.');
-                case 'limit_exceeded':
-                    throw new SupertextException('Your Supertext translation limit is exceeded. Please upgrade your subscription.');
-                case 'deleted':
-                    throw new SupertextException('The document was deleted at Supertext before it could be downloaded.');
-            }
-
-            ($this->sleep)($this->pollInterval);
-        } while (microtime(true) < $deadline);
-
-        throw new SupertextException('Timed out waiting for the Supertext translation.');
+        return $this->call(fn (): string => $this->sdk->translateHtml($html, $targetLanguage, $sourceLanguage !== '' ? $sourceLanguage : null, $politeness));
     }
 
-    private function download(string $fileId): string
+    /** Cost-free check that the key is accepted. */
+    public function validateApiKey(): void
     {
-        $body = $this->request('GET', 'translate/ai/file/' . rawurlencode($fileId) . '/translation')['body'];
-
-        if (trim($body) === '') {
-            throw new SupertextException('The translated document was empty.');
-        }
-
-        return $body;
-    }
-
-    /** @return array{status: int, body: string, headers: array<string, string>} */
-    private function request(string $method, string $path, ?string $body = null, string $contentType = ''): array
-    {
-        if ($this->apiKey === '') {
-            throw new SupertextException('No Supertext API key is configured. Generate one at https://www.supertext.com/en/integrations/api (requires the Admin role).');
-        }
-
-        $headers = [
-            'Accept'        => 'application/json',
-            'Authorization' => 'Supertext-Auth-Key ' . $this->apiKey,
-        ];
-
-        if ($contentType !== '') {
-            $headers['Content-Type'] = $contentType;
-        }
-
-        for ($attempt = 0; ; $attempt++) {
-            try {
-                $response = ($this->transport)($method, $this->baseUrl . $path, $headers, $body);
-            } catch (\Throwable $e) {
-                throw new SupertextException('Could not reach Supertext: %error%', ['%error%' => $e->getMessage()], 0, $e);
-            }
-
-            if ($response['status'] !== 429 || $attempt >= self::RATE_LIMIT_RETRIES) {
-                break;
-            }
-
-            ($this->sleep)(self::retryDelay($attempt, self::header($response['headers'], 'Retry-After')));
-        }
-
-        $code = $response['status'];
-
-        if ($code >= 200 && $code < 300) {
-            return $response;
-        }
-
-        $message = match (true) {
-            $code === 401, $code === 403 => 'Authentication failed. Please check the Supertext API key. A new key can be generated at https://www.supertext.com/en/integrations/api (requires the Admin role).',
-            $code === 404                => 'The requested Supertext resource was not found.',
-            $code === 413                => 'The content is too large for Supertext to translate in one go.',
-            $code === 429                => 'Too many requests to Supertext. Please try again shortly.',
-            $code >= 500                 => 'The Supertext service is currently unavailable.',
-            default                      => 'Supertext answered with HTTP %status%.',
-        };
-
-        $detail = mb_substr(trim(strip_tags($response['body'])), 0, 200);
-
-        throw new SupertextException($message, ['%status%' => $code], $code, null, $detail);
+        $this->call(fn () => $this->sdk->validateApiKey());
     }
 
     /** Seconds to wait before retry $attempt (0-based): Retry-After if sent, else 1, 2, 4, 8 plus jitter. */
     public static function retryDelay(int $attempt, string $retryAfter = ''): float
     {
-        if ($retryAfter !== '' && is_numeric($retryAfter) && (float) $retryAfter >= 0) {
-            return min(30.0, (float) $retryAfter);
-        }
-
-        return (2 ** $attempt) + random_int(0, 250) / 1000;
+        return Supertext::retryDelayMs($attempt, $retryAfter !== '' ? $retryAfter : null) / 1000;
     }
 
-    /** @param array<string, string> $headers */
-    private static function header(array $headers, string $name): string
+    /**
+     * @template T
+     * @param \Closure(): T $fn
+     * @return T
+     */
+    private function call(\Closure $fn): mixed
     {
-        foreach ($headers as $key => $value) {
-            if (strcasecmp($key, $name) === 0) {
-                return trim($value);
-            }
+        try {
+            return $fn();
+        } catch (SdkException $e) {
+            throw self::fromSdk($e);
         }
-
-        return '';
     }
 
-    /** @param array{status: int, body: string, headers: array<string, string>} $response */
-    private function json(array $response): array
+    /**
+     * The module's message for an SDK error code. Keep the arms of the "$message = match"
+     * block literal: tests/Support/ModuleStrings.php reads them for the translation files.
+     */
+    private static function fromSdk(SdkException $e): SupertextException
     {
-        $data = json_decode($response['body'], true);
+        $code = $e->errorCode;
+        $message = match (true) {
+            $code === SdkException::MISSING_API_KEY        => 'No Supertext API key is configured. Generate one at https://www.supertext.com/en/integrations/api (requires the Admin role).',
+            $code === SdkException::AUTHENTICATION_FAILURE => 'Authentication failed. Please check the Supertext API key. A new key can be generated at https://www.supertext.com/en/integrations/api (requires the Admin role).',
+            $code === SdkException::INVALID_LANGUAGE_PAIR  => 'Supertext does not support this language pair (%source% → %target%). Check the Supertext language code in the module settings.',
+            $code === SdkException::NOT_FOUND              => 'The requested Supertext resource was not found.',
+            $code === SdkException::PAYLOAD_TOO_LARGE      => 'The content is too large for Supertext to translate in one go.',
+            $code === SdkException::TOO_MANY_REQUESTS      => 'Too many requests to Supertext. Please try again shortly.',
+            $code === SdkException::SERVICE_UNAVAILABLE    => 'The Supertext service is currently unavailable.',
+            $code === SdkException::TRANSPORT_ERROR        => 'Could not reach Supertext: %error%',
+            $code === SdkException::NO_FILE_ID             => 'Supertext did not return a file id.',
+            $code === SdkException::TRANSLATION_ERROR      => 'Supertext could not translate the document.',
+            $code === SdkException::QUOTA_EXCEEDED         => 'Your Supertext translation limit is exceeded. Please upgrade your subscription.',
+            $code === SdkException::FILE_DELETED           => 'The document was deleted at Supertext before it could be downloaded.',
+            $code === SdkException::TIMEOUT                => 'Timed out waiting for the Supertext translation.',
+            $code === SdkException::INCOMPLETE_RESPONSE    => 'The translated document was empty.',
+            default                                        => 'Supertext answered with HTTP %status%.',
+        };
 
-        return \is_array($data) ? $data : [];
+        $detail = (string) $e->detail;
+        $parameters = match ($code) {
+            SdkException::INVALID_LANGUAGE_PAIR => ['%source%' => (string) $e->sourceLang ?: '?', '%target%' => (string) $e->targetLang ?: '?'],
+            SdkException::TRANSPORT_ERROR => ['%error%' => $detail],
+            default => ['%status%' => (int) $e->status],
+        };
+        if ($code === SdkException::TRANSPORT_ERROR) {
+            $detail = ''; // already in the message
+        }
+
+        return new SupertextException($message, $parameters, (int) $e->status, $e, $detail);
     }
 }

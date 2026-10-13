@@ -9,14 +9,14 @@ PrestaShop module `supertext` (folder `supertext/`, PHP 8.1+, PrestaShop 8.1+ / 
 ```
 supertext/
 ├── supertext.php                         Module class: install, settings page (getContent), hooks
+├── lib/supertext-sdk/                     bundled Supertext PHP SDK (namespace Supertext\PrestaShop\Sdk; never edit)
 ├── config/routes.yml                     supertext_translate (page), supertext_translate_run (one item × language)
 ├── config/services.yml                   the controller and the console command
 ├── src/
 │   ├── Api/                              no PrestaShop classes (unit-tested on their own)
-│   │   ├── SupertextClient.php           Supertext AI file translation API v1
-│   │   ├── HtmlDocument.php              fields ⇄ one HTML document with data-st-id elements
-│   │   ├── LanguageCodes.php             language tags → Supertext source and target codes
-│   │   ├── CurlTransport.php             HTTP via cURL (or streams), honours HTTPS_PROXY
+│   │   ├── SupertextClient.php           wrapper around the Supertext SDK: errors → translatable templates
+│   │   ├── CallableTransport.php         lets tests pass a fake HTTP callable
+│   │   ├── LanguageCodes.php             language tags → Supertext source and target codes (SDK + override)
 │   │   └── SupertextException.php
 │   ├── Translation/
 │   │   ├── EntityTypes.php               what is translated: product, category, cms + their fields
@@ -74,7 +74,7 @@ Multistore: the item is loaded and saved in the current shop context (the back o
 
 ## Supertext API protocol
 
-AI file translation API v1, same as the WordPress, Joomla and other Supertext plugins (`src/Api/SupertextClient.php`):
+AI file translation API v1, same as all Supertext plugins. Every call goes through the Supertext SDK (see *Supertext SDK*); this is what it does:
 
 1. `POST {base}/translate/ai/file` — multipart: `file` (`content.html`, part `Content-Type: text/html` exactly, or the API answers 415), `target_lang` (e.g. `de-CH`), `source_lang` (bare language, e.g. `en`; see *Language codes*), optional `politeness` (`more` formal, `less` informal). Answers `{"file_id": "…"}`.
 2. `GET {base}/translate/ai/file/{id}/status` every 2 s until `done` (or `error`, `limit_exceeded`, `deleted`), up to the timeout (default 180 s).
@@ -87,9 +87,19 @@ AI file translation API v1, same as the WordPress, Joomla and other Supertext pl
 - *Test connection* calls `GET {base}/features` (free).
 - Documents stay below 900,000 characters (API limit 1,000,000).
 
+### Supertext SDK
+
+The protocol, the retries, the language codes and the `data-st-id` document come from the official Supertext PHP SDK ([Supertext/Supertext-API-SDK-and-Guide](https://github.com/Supertext/Supertext-API-SDK-and-Guide)). The module ships a copy in `supertext/lib/supertext-sdk/` with its namespace changed from `Supertext\Sdk` to `Supertext\PrestaShop\Sdk` (in the module's Composer class map, built by `./build.sh`), so shops install nothing extra and another module that ships the SDK itself can't clash with it. HTTP goes through the SDK's `CurlTransport` (ext-curl, which PrestaShop requires; proxy environment variables apply). `COMMIT` there names the SDK revision.
+
+- Never edit `supertext/lib/supertext-sdk/`. Fix the SDK in its repository, then run `scripts/vendor-sdk.sh [ref]` (default `main`; `SDK_DIR=/path/to/clone` uses a local clone) and the tests.
+- `src/Api/SupertextClient.php` keeps the module's interface (`translateDocument`, `validateApiKey`) and turns every SDK error code into a `SupertextException` with an English template (the arms of its `$message = match` block, which `tests/Support/ModuleStrings.php` reads). A new SDK error code needs an arm there and its translation in the three edited XLF files (then `php tools/sync-translations.php`).
+- `FieldPlanner` builds and reads the document with the SDK's `HtmlDocument` and `Segment`.
+- PHPStan analyses the module's own code; `tests/phpstan/bootstrap.php` autoloads the SDK copy.
+- The live API answers an unknown language (`xx-YY`) with HTTP 404 `INVALID_LANGUAGE_PAIR`; the SDK reports it as `invalid_language_pair` with both codes, shown as "Supertext does not support this language pair (en → xx-YY)".
+
 ### Language codes
 
-Supertext rejects a bare target (`de`) and a regional source (`en-GB`) with `INVALID_LANGUAGE_PAIR`. `src/Api/LanguageCodes.php` (unit-tested, no PrestaShop classes) makes the codes:
+Supertext rejects a bare target (`de`) and a regional source (`en-GB`) with `INVALID_LANGUAGE_PAIR`. `src/Api/LanguageCodes.php` (the SDK's `LanguageCodes` plus the per-language override; unit-tested, no PrestaShop classes) makes the codes:
 
 - **Source:** the bare language of the language's Supertext code override, else of its locale: `en-US`, `en_GB` → `en`. The locale is used, not `iso_code`: PrestaShop gives some languages country-like ISO codes (`gb` for en-GB, `br` for pt-BR, `mx` for es-MX).
 - **Target:** the override, else the locale (`locale`, then `language_code`, then `iso_code`), normalized (`de_ch` → `de-CH`; scripts and numeric regions keep their form: `zh-Hant`, `es-419`). A code without a region gets a default: ar-SA, bg-BG, cs-CZ, da-DK, de-DE, el-GR, en-US, es-ES, et-EE, fi-FI, fr-FR, hr-HR, hu-HU, it-IT, ja-JP, ko-KR, lt-LT, lv-LV, nb-NO, nl-NL, pl-PL, pt-PT, ro-RO, ru-RU, sk-SK, sl-SI, sr-RS, sv-SE, th-TH, tr-TR, uk-UA, vi-VN, zh-CN (same table in every Supertext plugin). Unknown bare codes are sent unchanged, so Supertext's error names them.
@@ -129,7 +139,7 @@ To translate without a Supertext key, run the stand-in API (`node tests/docs/sta
 
 ```bash
 composer install
-composer test        # PHPUnit: API client, HTML document, field planner, entity types, translation files (no PrestaShop needed)
+composer test        # PHPUnit: SDK wrapper, field planner, entity types, translation files (no PrestaShop needed)
 ./build.sh           # dist/supertext-<version>.zip
 ```
 

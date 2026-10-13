@@ -74,6 +74,7 @@ The table shows the reason for each item and language that fails; the other ones
 | *Supertext is not set up yet* | An administrator needs to enter the API key in the module settings. |
 | *You are not allowed to edit this item* | Your profile can't edit this kind of item; ask an administrator. |
 | *Authentication failed* | The API key is no longer valid; tell your administrator. |
+| *Supertext does not support this language pair (en → …)* | Supertext can't translate into this language, or its Supertext language code in the module settings is wrong. Tell your administrator. |
 | *Too many requests to Supertext* | Wait a moment and click **Translate** again. Items already done show *Already translated, unchanged*. |
 | *Your Supertext translation limit is exceeded* | Your Supertext plan's volume is used up; tell your administrator. |
 | *The translation could not be saved: …* | PrestaShop rejected a translated value. Translate that field by hand. |

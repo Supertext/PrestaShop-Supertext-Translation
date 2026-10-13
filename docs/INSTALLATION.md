@@ -11,7 +11,7 @@ A ready-to-run container with PrestaShop 9, English sample products, a category 
 | | |
 | --- | --- |
 | PrestaShop | 9.x (tested with 9.2), 8.1 and 8.2 (supported, not yet tested) |
-| PHP | 8.1 or later (whatever your PrestaShop version needs), with `ext-dom` and `ext-curl` (or `allow_url_fopen`) |
+| PHP | 8.1 or later (whatever your PrestaShop version needs), with `ext-dom` and `ext-curl` |
 | Shop setup | At least two languages (step 3) |
 | Supertext | An account with an API key, see [Get a Supertext account and API key](#get-a-supertext-account-and-api-key) |
 | Network | The web server must reach `https://api.supertext.com` over HTTPS |
@@ -118,6 +118,7 @@ Upload the new zip in *Modules → Module Manager → Upload a module* (or repla
 | *Authentication failed* | The key is wrong or revoked. Check it with **Test connection**; if needed, generate a new one at [supertext.com → Integrations → API](https://www.supertext.com/en/integrations/api) (Admin role required). |
 | *You are not allowed to edit this item* | The employee's profile lacks *Edit* permission (see *Who can translate*). |
 | *The translation could not be saved: …* | PrestaShop rejected a translated value (e.g. a field it validates strictly). The message names the field; translate it by hand or report it to Supertext. |
+| *Supertext does not support this language pair (en → xx-YY)* | The shop language (or its Supertext language code in the module settings) isn't one Supertext offers. Set a code such as `de-CH` or `fr`; the message shows the codes that were sent. |
 | *Too many requests to Supertext* | Supertext's per-second limit was still exceeded after 4 automatic retries. Wait a moment and translate again. |
 | *Your Supertext translation limit is exceeded* | Your Supertext plan's volume is used up. |
 | *Timed out waiting* | Very long descriptions: raise the *Timeout* (and PHP's `max_execution_time`). |
