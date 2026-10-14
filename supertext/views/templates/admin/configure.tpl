@@ -29,6 +29,20 @@
         </div>
       </div>
 
+      <div class="form-group" id="supertext-key-check">
+        <label class="control-label col-lg-3">{l s='API key check' d='Modules.Supertext.Admin'}</label>
+        <div class="col-lg-6">
+          {if $st.keyCheck}
+            <div class="alert {if $st.keyCheck.status == 'ok'}alert-success{elseif $st.keyCheck.status == 'invalid' || $st.keyCheck.status == 'missing'}alert-danger{else}alert-warning{/if} st-key-check" data-status="{$st.keyCheck.status|escape:'html':'UTF-8'}">
+              {$st.keyCheck.message nofilter}
+              <br><small>{l s='Checked %time%' d='Modules.Supertext.Admin' sprintf=['%time%' => $st.keyCheck.time]}</small>
+            </div>
+          {else}
+            <p class="form-control-static">{l s='Not checked yet. It is checked when you save these settings or test the connection.' d='Modules.Supertext.Admin'}</p>
+          {/if}
+        </div>
+      </div>
+
       <div class="form-group">
         <label class="control-label col-lg-3" for="supertext-environment">{l s='API environment' d='Modules.Supertext.Admin'}</label>
         <div class="col-lg-4">
@@ -58,6 +72,23 @@
         </div>
         <div class="col-lg-4"><p class="help-block">{l s='Maximum wait for one translation.' d='Modules.Supertext.Admin'}</p></div>
       </div>
+
+      <div class="form-group" id="supertext-version-reports">
+        <div class="col-lg-9 col-lg-offset-3">
+          <div class="checkbox">
+            <label>
+              <input type="checkbox" name="version_reports" value="1"{if $st.versionReports} checked{/if}>
+              {l s='Send version information to Supertext' d='Modules.Supertext.Admin'}
+            </label>
+          </div>
+          <p class="help-block">
+            {l s='Sends the site URL and the versions of this module, the shop and the runtime to Supertext when you save these settings and after an update, so Supertext support can see which version you run. No content, no API key and no personal data are sent.' d='Modules.Supertext.Admin'}
+            {if $st.versionReportsFromEnv}
+              <br><strong class="st-reports-env">{if $st.versionReportsEnabled}{l s='The SUPERTEXT_VERSION_REPORTS environment variable is set and turns it on.' d='Modules.Supertext.Admin'}{else}{l s='The SUPERTEXT_VERSION_REPORTS environment variable is set and turns it off.' d='Modules.Supertext.Admin'}{/if}</strong>
+            {/if}
+          </p>
+        </div>
+      </div>
     </div>
 
     <div class="panel-footer">
@@ -70,7 +101,7 @@
     <div class="panel-heading"><i class="icon-flag"></i> {l s='Languages' d='Modules.Supertext.Admin'}</div>
     <p>
       {l s='Supertext translates into the languages of your shop.' d='Modules.Supertext.Admin'}
-      {l s='By default the locale of the language (e.g. de-CH) is sent; enter a different code to override it, e.g. fr-CH for Swiss French.' d='Modules.Supertext.Admin'}
+      {l s='Choose the Supertext language for each shop language. A locale that is a Supertext language (e.g. de-CH, es) is preselected; other locales (e.g. de, es-ES) need a choice, otherwise that language isn\'t translated.' d='Modules.Supertext.Admin'}
       <a href="{$st.languagesUrl|escape:'html':'UTF-8'}">{l s='Manage languages' d='Modules.Supertext.Admin'}</a>
     </p>
     <table class="table">
@@ -78,7 +109,7 @@
         <tr>
           <th>{l s='Language' d='Modules.Supertext.Admin'}</th>
           <th>{l s='Locale' d='Modules.Supertext.Admin'}</th>
-          <th>{l s='Supertext language code' d='Modules.Supertext.Admin'}</th>
+          <th>{l s='Supertext language' d='Modules.Supertext.Admin'}</th>
           <th>{l s='Tone' d='Modules.Supertext.Admin'}</th>
         </tr>
       </thead>
@@ -91,13 +122,29 @@
               {if !$language.active}<span class="label label-default">{l s='Inactive' d='Modules.Supertext.Admin'}</span>{/if}
             </td>
             <td><code>{$language.locale|escape:'html':'UTF-8'}</code></td>
-            <td><input type="text" name="languages[{$language.id|intval}][code]" value="{$language.code|escape:'html':'UTF-8'}" class="form-control" placeholder="{$language.locale|escape:'html':'UTF-8'}" style="max-width:10em"></td>
+            <td>
+              <select name="languages[{$language.id|intval}][code]" class="form-control st-language" style="max-width:20em">
+                <option value=""{if $language.code == ''} selected{/if}>— {l s='Not mapped' d='Modules.Supertext.Admin'} —</option>
+                {if $language.custom}
+                  <option value="{$language.code|escape:'html':'UTF-8'}" selected>{$language.code|escape:'html':'UTF-8'}</option>
+                {/if}
+                {foreach $st.targets as $target}
+                  <option value="{$target.code|escape:'html':'UTF-8'}"{if $language.code == $target.code} selected{/if}>{$target.name|escape:'html':'UTF-8'} ({$target.code|escape:'html':'UTF-8'})</option>
+                {/foreach}
+              </select>
+              {if !$language.target}
+                <p class="help-block text-danger st-not-mapped">{l s='Not mapped: choose a Supertext language, or this language isn\'t translated.' d='Modules.Supertext.Admin'}</p>
+              {/if}
+            </td>
             <td>
               <select name="languages[{$language.id|intval}][tone]" class="form-control" style="max-width:16em">
                 <option value="default"{if $language.tone == 'default'} selected{/if}>{l s='Supertext default' d='Modules.Supertext.Admin'}</option>
                 <option value="more"{if $language.tone == 'more'} selected{/if}>{l s='Formal (Sie, vous)' d='Modules.Supertext.Admin'}</option>
                 <option value="less"{if $language.tone == 'less'} selected{/if}>{l s='Informal (du, tu)' d='Modules.Supertext.Admin'}</option>
               </select>
+              {if $language.toneUnsupported}
+                <p class="help-block text-warning st-no-politeness">{l s='Supertext offers no formal/informal choice for this language: choose "Supertext default".' d='Modules.Supertext.Admin'}</p>
+              {/if}
             </td>
           </tr>
         {/foreach}

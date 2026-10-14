@@ -36,7 +36,7 @@ final class SupertextClientTest extends TestCase
             };
         });
 
-        $html = $client->translateDocument('<div data-st-id="0">Hello</div>', 'de-CH', 'en-GB', 'more');
+        $html = $client->translateDocument('<div data-st-id="0">Hello</div>', 'de-CH', 'en', 'more');
 
         self::assertStringContainsString('Hallo', $html);
         self::assertSame(
@@ -53,19 +53,45 @@ final class SupertextClientTest extends TestCase
         self::assertStringContainsString("filename=\"content.html\"\r\nContent-Type: text/html\r\n\r\n<div", $post['body']);
     }
 
-    public function testSendsABareTargetWithItsDefaultRegion(): void
+    public function testSendsTheCodesAsGiven(): void
     {
         $client = $this->client(fn (string $method, string $url) => match (true) {
             $method === 'POST'                  => ['status' => 200, 'body' => '{"file_id":"f1"}'],
             str_ends_with($url, '/status')      => ['status' => 200, 'body' => '{"status":"done"}'],
-            str_ends_with($url, '/translation') => ['status' => 200, 'body' => '<div data-st-id="0">Hallo</div>'],
+            str_ends_with($url, '/translation') => ['status' => 200, 'body' => '<div data-st-id="0">Hola</div>'],
             default                             => ['status' => 200, 'body' => '{}'],
         });
 
-        $client->translateDocument('<div data-st-id="0">Hello</div>', 'de', 'en_US');
+        $client->translateDocument('<div data-st-id="0">Hello</div>', 'es', 'en');
 
-        self::assertStringContainsString("name=\"target_lang\"\r\n\r\nde-DE\r\n", (string) $this->calls[0]['body']);
+        self::assertStringContainsString("name=\"target_lang\"\r\n\r\nes\r\n", (string) $this->calls[0]['body']);
         self::assertStringContainsString("name=\"source_lang\"\r\n\r\nen\r\n", (string) $this->calls[0]['body']);
+    }
+
+    public function testExplainsAToneTheLanguageLacks(): void
+    {
+        $client = $this->client(fn () => ['status' => 400, 'body' => '{"error_code":"FEATURE_ERROR","detail":"politeness not supported"}']);
+
+        try {
+            $client->translateDocument('<p>x</p>', 'en-US', 'de', 'more');
+            self::fail('Expected an exception');
+        } catch (SupertextException $e) {
+            self::assertSame('unsupported_feature', $e->errorCode());
+            self::assertSame('Supertext offers no formal or informal tone for this language. Set its tone to "Supertext default" in the module settings.', $e->template());
+        }
+    }
+
+    public function testRecognisesARejectedKey(): void
+    {
+        $client = $this->client(fn () => ['status' => 403, 'body' => '{"error_code":"FORBIDDEN"}']);
+
+        try {
+            $client->validateApiKey();
+            self::fail('Expected an exception');
+        } catch (SupertextException $e) {
+            self::assertTrue($e->isAuthenticationFailure());
+            self::assertSame(403, $e->getCode());
+        }
     }
 
     public function testAcceptsTheKeyWithItsPrefix(): void
@@ -168,7 +194,7 @@ final class SupertextClientTest extends TestCase
             $client->translateDocument('<p>x</p>', 'xx-YY', 'en');
             self::fail('Expected an exception');
         } catch (SupertextException $e) {
-            self::assertSame('Supertext does not support this language pair (%source% → %target%). Check the Supertext language code in the module settings.', $e->template());
+            self::assertSame('Supertext does not support this language pair (%source% → %target%). Check the Supertext language in the module settings.', $e->template());
             self::assertSame(['%source%' => 'en', '%target%' => 'xx-YY'], $e->parameters());
         }
     }

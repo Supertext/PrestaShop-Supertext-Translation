@@ -5,6 +5,10 @@
  * (samples.json: human translations of demo/sample-content.json, keyed by the target
  * language's primary subtag).
  * Unknown text comes back as "[<target>] text". Listens on :8765 (any API key).
+ *
+ * Also a fake Commando Center, so screenshots and CI never report to the live one: start the
+ * shop with SUPERTEXT_REPORT_URL=http://127.0.0.1:8765/report. POST /report answers 202 and
+ * keeps the report; GET /reports lists them.
  */
 import http from 'node:http'
 import { randomBytes } from 'node:crypto'
@@ -20,6 +24,11 @@ const samples = Object.fromEntries(
   ]),
 )
 const files = new Map()
+const reports = []
+// The target codes of Supertext's `GET features` (the SDK's Languages::TARGETS, October 2026).
+const TARGETS = new Set(['bg', 'cs', 'da', 'de-AT', 'de-CH', 'de-DE', 'el', 'en-GB', 'en-US', 'es', 'fi', 'fr-CH', 'fr-FR',
+  'gsw-u-sd-chbe', 'gsw-u-sd-chzh', 'hr', 'hu', 'it-CH', 'it-IT', 'ja', 'ko', 'nb', 'nl', 'pl', 'pt-BR', 'pt-PT', 'rm', 'ru',
+  'sk', 'sl', 'sq', 'sr-Cyrl', 'sr-Latn', 'sv', 'tr', 'zh-Hans', 'zh-Hant'])
 
 http
   .createServer(async (req, res) => {
@@ -28,6 +37,13 @@ http
       res.writeHead(status, { 'Content-Type': type })
       res.end(type === 'application/json' ? JSON.stringify(body) : body)
     }
+    if (path === '/report' && req.method === 'POST') {
+      const chunks = []
+      for await (const chunk of req) chunks.push(chunk)
+      reports.push(JSON.parse(Buffer.concat(chunks).toString('utf8')))
+      return send(202, { ok: true })
+    }
+    if (path === '/reports') return send(200, reports)
     if (!/^Supertext-Auth-Key \S+$/.test(req.headers.authorization || '')) return send(401, { detail: 'missing key' })
     if (path === '/features') return send(200, {})
     if (req.method === 'POST') {
@@ -36,11 +52,11 @@ http
       const form = await new Request('http://x', { method: 'POST', headers: req.headers, body: Buffer.concat(chunks) }).formData()
       const file = form.get('file')
       if (!file || file.type !== 'text/html') return send(415, { detail: 'FILETYPE_NOT_ALLOWED' })
-      // Like the live API: the target needs a region (de-DE), the source must be bare (en).
+      // Like the live API: only Supertext's exact target codes (de-CH, es; not de, es-ES), bare sources (en).
       const target = String(form.get('target_lang') ?? '')
       const source = form.get('source_lang')
-      if (!/^[a-z]{2,3}-[A-Za-z0-9]{2,8}$/.test(target) || (source !== null && !/^[a-z]{2,3}$/.test(String(source)))) {
-        return send(400, { detail: { code: 'INVALID_LANGUAGE_PAIR', message: `Invalid language pair ${source ?? 'auto'} → ${target}` } })
+      if (!TARGETS.has(target) || (source !== null && !/^[a-z]{2,3}$/.test(String(source)))) {
+        return send(404, { error_code: 'INVALID_LANGUAGE_PAIR', source_lang: source, target_lang: target, detail: `Invalid language pair ${source ?? 'auto'} → ${target}` })
       }
       const id = randomBytes(6).toString('hex')
       files.set(id, { html: await file.text(), target })

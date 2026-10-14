@@ -9,6 +9,7 @@
 namespace Supertext\PrestaShop\Controller\Admin;
 
 use PrestaShopBundle\Controller\Admin\FrameworkBundleAdminController;
+use Supertext\PrestaShop\Api\Reporting;
 use Supertext\PrestaShop\Api\SupertextException;
 use Supertext\PrestaShop\Settings;
 use Supertext\PrestaShop\Translation\EntityTranslator;
@@ -74,11 +75,11 @@ class TranslateController extends FrameworkBundleAdminController
         $targetRows = array_map(static fn (array $l): array => [
             'id'     => (int) $l['id_lang'],
             'name'   => $l['name'],
-            'code'   => Settings::targetCode(new \Language((int) $l['id_lang'])),
+            'code'   => Settings::targetCodeOrNull(new \Language((int) $l['id_lang'])),
             'active' => (bool) $l['active'],
         ], $targets);
 
-        return $this->render('@Modules/supertext/views/templates/admin/translate.html.twig', [
+        $response = $this->render('@Modules/supertext/views/templates/admin/translate.html.twig', [
             'layoutTitle'   => $this->t('Translate with Supertext'),
             'type'          => $type,
             'typeLabel'     => $this->typeLabel($type),
@@ -96,6 +97,10 @@ class TranslateController extends FrameworkBundleAdminController
             'listUrl'       => \Context::getContext()->link->getAdminLink($definition['tab']),
             'enableSidebar' => false,
         ]);
+
+        Settings::reportAfterResponse();
+
+        return $response;
     }
 
     /** POST type, id, source, target, overwrite: translates one item into one language. */
@@ -134,8 +139,17 @@ class TranslateController extends FrameworkBundleAdminController
         } catch (SupertextException|\PrestaShopException $e) {
             \PrestaShopLogger::addLog('Supertext: ' . $e->getMessage(), 2, null, EntityTypes::get($type)['class'], $id, true);
 
+            if ($e instanceof SupertextException && $e->isAuthenticationFailure()) {
+                $status = $e->getCode() === 403 ? 403 : 401;
+                Settings::reportAfterResponse(static fn (Reporting $reporting, string $key) => $reporting->authenticationFailed($key, $status));
+            } else {
+                Settings::reportAfterResponse();
+            }
+
             return $this->json(['ok' => false, 'message' => $e instanceof SupertextException ? $this->errorMessage($e) : $e->getMessage()]);
         }
+
+        Settings::reportAfterResponse();
 
         $kept = \count($result['kept']);
 

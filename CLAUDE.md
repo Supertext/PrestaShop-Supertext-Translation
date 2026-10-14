@@ -78,7 +78,7 @@ The user guide and installation guide of every plugin include screenshots of the
 
 AI file translation API v1, same as the WordPress plugin: POST HTML file → poll status → GET translation → DELETE. Details in `docs/DEVELOPER.md`. Never commit API keys; use the `SUPERTEXT_API_KEY` environment variable or the module's API key setting.
 
-Lessons from the live API, apply them here: header `Authorization: Supertext-Auth-Key <key>` (strip a pasted prefix), retry HTTP 429 (per-second rate limit), keep a whole text in one `data-st-id` element (each one is translated on its own), and language codes: source = bare language (`en`), target = regional code (`de-DE`, `en-US`); Supertext rejects bare targets (`INVALID_LANGUAGE_PAIR`). Bare CMS locales get a regional default; see `docs/DEVELOPER.md` → *Language codes*.
+Lessons from the live API, apply them here: header `Authorization: Supertext-Auth-Key <key>` (strip a pasted prefix), retry HTTP 429 (per-second rate limit), keep a whole text in one `data-st-id` element (each one is translated on its own). **Languages:** only the codes Supertext's `GET features` lists (the SDK's `V1\Languages`): bare sources (`en`); targets regional only for de/en/fr/it/pt (`de-CH`, `en-US`), `zh-Hans`/`zh-Hant`, `sr-Latn`/`sr-Cyrl`, `gsw-u-sd-chzh`/`chbe`, bare for the rest (`es`, `nl`, `sl`). **No guessing:** the language's *Supertext language* setting, else an exact match of the locale, else the error `unsupported_language`. No default regions; see `docs/DEVELOPER.md` → *Language codes*.
 
 ## This repo
 

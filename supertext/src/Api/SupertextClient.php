@@ -8,17 +8,18 @@
 
 namespace Supertext\PrestaShop\Api;
 
-use Supertext\PrestaShop\Sdk\Client;
 use Supertext\PrestaShop\Sdk\Http\HttpTransport;
-use Supertext\PrestaShop\Sdk\Supertext;
-use Supertext\PrestaShop\Sdk\SupertextException as SdkException;
+use Supertext\PrestaShop\Sdk\V1\Client;
+use Supertext\PrestaShop\Sdk\V1\Protocol;
+use Supertext\PrestaShop\Sdk\V1\SupertextException as SdkException;
 
 /**
  * Supertext AI file translation API v1 (https://api.supertext.com/v1/), through the
- * Supertext PHP SDK bundled in lib/supertext-sdk (namespace Supertext\PrestaShop\Sdk).
+ * Supertext PHP SDK bundled in lib/supertext-sdk (namespace Supertext\PrestaShop\Sdk\V1).
  *
  * The SDK does the protocol (upload one HTML document, poll its status, download the
- * translation, delete the file), the auth header, HTTP 429 retries and language codes.
+ * translation, delete the file), the auth header and HTTP 429 retries. Language codes are
+ * sent as given: resolve them with LanguageCodes first.
  * This class keeps the module's interface and turns SDK errors into this module's
  * SupertextException, whose English template the back office translates
  * (domain Modules.Supertext.Admin).
@@ -27,7 +28,7 @@ use Supertext\PrestaShop\Sdk\SupertextException as SdkException;
  */
 final class SupertextClient
 {
-    public const LIVE = Supertext::LIVE_BASE_URL;
+    public const LIVE = Protocol::LIVE_BASE_URL;
     public const STAGING = 'https://api.staging.supertext.com/v1/';
     public const TESTING = 'https://api.testing.supertext.com/v1/';
 
@@ -97,8 +98,8 @@ final class SupertextClient
     /**
      * Translates a complete HTML document and returns the translated HTML.
      *
-     * @param string $targetLanguage any form; sent as a regional code ("de" → "de-DE")
-     * @param string $sourceLanguage any form ("en-GB"); sent as the bare language. Empty: auto-detect.
+     * @param string $targetLanguage a Supertext target code (LanguageCodes::target()), sent as given
+     * @param string $sourceLanguage a Supertext source code (LanguageCodes::source()), sent as given. Empty: auto-detect.
      * @param string $politeness     "default", "more" (formal) or "less" (informal)
      */
     public function translateDocument(string $html, string $targetLanguage, string $sourceLanguage = '', string $politeness = 'default'): string
@@ -119,7 +120,7 @@ final class SupertextClient
     /** Seconds to wait before retry $attempt (0-based): Retry-After if sent, else 1, 2, 4, 8 plus jitter. */
     public static function retryDelay(int $attempt, string $retryAfter = ''): float
     {
-        return Supertext::retryDelayMs($attempt, $retryAfter !== '' ? $retryAfter : null) / 1000;
+        return Protocol::retryDelayMs($attempt, $retryAfter !== '' ? $retryAfter : null) / 1000;
     }
 
     /**
@@ -140,13 +141,15 @@ final class SupertextClient
      * The module's message for an SDK error code. Keep the arms of the "$message = match"
      * block literal: tests/Support/ModuleStrings.php reads them for the translation files.
      */
-    private static function fromSdk(SdkException $e): SupertextException
+    public static function fromSdk(SdkException $e): SupertextException
     {
         $code = $e->errorCode;
         $message = match (true) {
-            $code === SdkException::MISSING_API_KEY        => 'No Supertext API key is configured. Generate one at https://www.supertext.com/en/integrations/api (requires the Admin role).',
-            $code === SdkException::AUTHENTICATION_FAILURE => 'Authentication failed. Please check the Supertext API key. A new key can be generated at https://www.supertext.com/en/integrations/api (requires the Admin role).',
-            $code === SdkException::INVALID_LANGUAGE_PAIR  => 'Supertext does not support this language pair (%source% → %target%). Check the Supertext language code in the module settings.',
+            $code === SdkException::MISSING_API_KEY        => 'No Supertext API key is configured. No Supertext account yet? Create one at https://www.supertext.com/person/en/account/signin. Generate your API key at https://www.supertext.com/en/integrations/api (requires the Admin role).',
+            $code === SdkException::AUTHENTICATION_FAILURE => 'Authentication failed. Please check the Supertext API key. A new key can be generated at https://www.supertext.com/en/integrations/api (requires the Admin role). No Supertext account yet? Create one at https://www.supertext.com/person/en/account/signin.',
+            $code === SdkException::INVALID_LANGUAGE_PAIR  => 'Supertext does not support this language pair (%source% → %target%). Check the Supertext language in the module settings.',
+            $code === SdkException::UNSUPPORTED_LANGUAGE   => 'The language %language% has no Supertext language yet. Ask your administrator to map it in the module settings (Languages → Supertext language).',
+            $code === SdkException::UNSUPPORTED_FEATURE    => 'Supertext offers no formal or informal tone for this language. Set its tone to "Supertext default" in the module settings.',
             $code === SdkException::NOT_FOUND              => 'The requested Supertext resource was not found.',
             $code === SdkException::PAYLOAD_TOO_LARGE      => 'The content is too large for Supertext to translate in one go.',
             $code === SdkException::TOO_MANY_REQUESTS      => 'Too many requests to Supertext. Please try again shortly.',
@@ -164,11 +167,17 @@ final class SupertextClient
         $detail = (string) $e->detail;
         $parameters = match ($code) {
             SdkException::INVALID_LANGUAGE_PAIR => ['%source%' => (string) $e->sourceLang ?: '?', '%target%' => (string) $e->targetLang ?: '?'],
+            SdkException::UNSUPPORTED_LANGUAGE => ['%language%' => (string) ($e->targetLang ?? $e->sourceLang) ?: '?'],
+            SdkException::UNSUPPORTED_FEATURE => [],
             SdkException::TRANSPORT_ERROR => ['%error%' => $detail],
             default => ['%status%' => (int) $e->status],
         };
         if ($code === SdkException::TRANSPORT_ERROR) {
             $detail = ''; // already in the message
+        }
+
+        if ($code === SdkException::UNSUPPORTED_LANGUAGE) {
+            $detail = ''; // nothing was sent; the language is in the message
         }
 
         return new SupertextException($message, $parameters, (int) $e->status, $e, $detail);

@@ -9,12 +9,14 @@
 namespace Supertext\PrestaShop;
 
 use Supertext\PrestaShop\Api\LanguageCodes;
+use Supertext\PrestaShop\Api\Reporting;
 use Supertext\PrestaShop\Api\SupertextClient;
+use Supertext\PrestaShop\Api\SupertextException;
 use Supertext\PrestaShop\Sdk\Http\CurlTransport;
 
 /**
  * The module's settings (PrestaShop configuration table), with the environment variables
- * SUPERTEXT_API_KEY and SUPERTEXT_API_ENDPOINT taking precedence.
+ * SUPERTEXT_API_KEY, SUPERTEXT_API_ENDPOINT and SUPERTEXT_VERSION_REPORTS taking precedence.
  */
 final class Settings
 {
@@ -24,7 +26,13 @@ final class Settings
     public const LANGUAGES   = 'SUPERTEXT_LANGUAGES';
     public const TIMEOUT     = 'SUPERTEXT_TIMEOUT';
 
-    public const ALL = [self::API_KEY, self::ENVIRONMENT, self::ENDPOINT, self::LANGUAGES, self::TIMEOUT];
+    /** "Send version information to Supertext": 1 or 0 (missing: on). */
+    public const VERSION_REPORTS = 'SUPERTEXT_VERSION_REPORTS';
+
+    /** The Commando Center reporter's state (JSON: what was reported last, the latest API key check). */
+    public const REPORTER_STATE = 'SUPERTEXT_REPORTER_STATE';
+
+    public const ALL = [self::API_KEY, self::ENVIRONMENT, self::ENDPOINT, self::LANGUAGES, self::TIMEOUT, self::VERSION_REPORTS, self::REPORTER_STATE];
 
     public const SIGNUP_URL  = 'https://www.supertext.com/person/en/account/signin';
     public const API_KEY_URL = 'https://www.supertext.com/en/integrations/api';
@@ -96,22 +104,43 @@ final class Settings
         \Configuration::updateGlobalValue(self::LANGUAGES, json_encode($languages, JSON_UNESCAPED_SLASHES));
     }
 
-    /** The code sent to Supertext as target language: the override, else the language's locale, always with a region (de → de-DE). */
+    /**
+     * The code sent to Supertext as target language: the language's Supertext language (setting),
+     * else its locale when that is a Supertext code apart from case and "_"/"-". Never guessed.
+     *
+     * @throws SupertextException unsupported_language: the language needs a Supertext language
+     */
     public static function targetCode(\Language $language): string
     {
-        return LanguageCodes::target(self::localeOf($language), self::languages()[(int) $language->id]['code'] ?? '');
+        return LanguageCodes::target(self::localeOf($language), self::override((int) $language->id));
     }
 
-    /** The code sent to Supertext as source language: the bare language of the override or locale (en-GB → en). */
+    /** The target code, or null when the language has no Supertext language yet. */
+    public static function targetCodeOrNull(\Language $language): ?string
+    {
+        return LanguageCodes::targetOrNull(self::localeOf($language), self::override((int) $language->id));
+    }
+
+    /**
+     * The code sent to Supertext as source language: the source form of the same setting or of the
+     * locale (de-CH → de, en-GB → en).
+     *
+     * @throws SupertextException unsupported_language
+     */
     public static function sourceCode(\Language $language): string
     {
-        return LanguageCodes::source(self::localeOf($language), self::languages()[(int) $language->id]['code'] ?? '');
+        return LanguageCodes::source(self::localeOf($language), self::override((int) $language->id));
     }
 
     /** The language's locale (en-GB). Not iso_code: PrestaShop uses country-like iso codes for some languages (gb, br, mx). */
-    private static function localeOf(\Language $language): string
+    public static function localeOf(\Language $language): string
     {
         return (string) ($language->locale ?: $language->language_code ?: $language->iso_code);
+    }
+
+    private static function override(int $idLang): string
+    {
+        return self::languages()[$idLang]['code'] ?? '';
     }
 
     public static function tone(int $idLang): string
@@ -119,10 +148,99 @@ final class Settings
         return self::languages()[$idLang]['tone'] ?? 'default';
     }
 
-    /** "de-ch" or "de_CH" → "de-CH" */
-    public static function formatTag(string $tag): string
+    /* ------------------------------------------------------------------ Commando Center */
+
+    /** The "Send version information to Supertext" setting (on unless switched off). */
+    public static function versionReportsSetting(): bool
     {
-        return LanguageCodes::format($tag);
+        $value = (string) \Configuration::getGlobalValue(self::VERSION_REPORTS);
+
+        return $value === '' || (bool) (int) $value;
+    }
+
+    /** Whether reports are sent: SUPERTEXT_VERSION_REPORTS on the server wins over the setting. */
+    public static function versionReportsEnabled(): bool
+    {
+        return Reporting::enabled(self::versionReportsSetting());
+    }
+
+    /** The shop's base URL as PrestaShop knows it (default shop, https when SSL is enabled), with a trailing slash. */
+    public static function siteUrl(): ?string
+    {
+        $shop   = new \Shop((int) \Configuration::get('PS_SHOP_DEFAULT'));
+        $ssl    = (bool) \Configuration::get('PS_SSL_ENABLED');
+        $domain = (string) ($ssl ? $shop->domain_ssl : $shop->domain);
+
+        return $domain !== '' ? ($ssl ? 'https://' : 'http://') . $domain . $shop->getBaseURI() : null;
+    }
+
+    /** The public ping endpoint (module front controller "ping"); works with and without friendly URLs. */
+    public static function pingUrl(?string $siteUrl): ?string
+    {
+        return $siteUrl !== null ? rtrim($siteUrl, '/') . '/index.php?fc=module&module=supertext&controller=ping' : null;
+    }
+
+    /** The module's version from supertext.php (the official version source). */
+    public static function moduleVersion(): string
+    {
+        $module  = \Module::getInstanceByName('supertext');
+        $version = $module instanceof \Module ? (string) $module->version : '';
+
+        return $version !== '' ? $version : '0.0.0';
+    }
+
+    public static function reporting(): Reporting
+    {
+        $siteUrl = self::siteUrl();
+
+        return new Reporting(
+            enabled: self::versionReportsEnabled(),
+            siteUrl: $siteUrl,
+            pluginVersion: self::moduleVersion(),
+            systemVersion: \defined('_PS_VERSION_') ? (string) _PS_VERSION_ : null,
+            callbackUrl: self::pingUrl($siteUrl),
+            apiBaseUrl: self::baseUrl(),
+            load: static function (): ?string {
+                $value = (string) \Configuration::getGlobalValue(self::REPORTER_STATE);
+
+                return $value !== '' ? $value : null;
+            },
+            save: static function (string $json): void {
+                \Configuration::updateGlobalValue(self::REPORTER_STATE, $json);
+            },
+        );
+    }
+
+    /**
+     * Runs the reporter's onRequest() (or another action) once the back-office response is out, where
+     * PHP allows it (PHP-FPM, LiteSpeed); otherwise at the end of the request. Never fails the request.
+     *
+     * @param (\Closure(Reporting, string): mixed)|null $action default: onRequest
+     */
+    public static function reportAfterResponse(?\Closure $action = null): void
+    {
+        static $queued = false;
+
+        if ($queued && $action === null) {
+            return;
+        }
+
+        $queued = $queued || $action === null;
+
+        register_shutdown_function(static function () use ($action): void {
+            try {
+                if (\function_exists('fastcgi_finish_request')) {
+                    fastcgi_finish_request();
+                } elseif (\function_exists('litespeed_finish_request')) {
+                    \call_user_func('litespeed_finish_request');
+                }
+
+                $reporting = self::reporting();
+                $action !== null ? $action($reporting, self::apiKey()) : $reporting->onRequest(self::apiKey());
+            } catch (\Throwable) {
+                // Reporting is optional.
+            }
+        });
     }
 
     public static function client(): SupertextClient

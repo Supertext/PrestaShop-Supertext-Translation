@@ -78,6 +78,10 @@ class TranslateCommand extends Command
             }
         }
 
+        // Commando Center: checks a changed key and reports an update (never fails the command).
+        $reporting = Settings::reporting();
+        $reporting->onRequest(Settings::apiKey());
+
         if (Settings::apiKey() === '') {
             $output->writeln('<error>No Supertext API key. Set it in the module settings or SUPERTEXT_API_KEY. Create an account at '
                 . Settings::SIGNUP_URL . ' and generate the key at ' . Settings::API_KEY_URL . ' (requires the Admin role).</error>');
@@ -87,10 +91,11 @@ class TranslateCommand extends Command
 
         $translator = EntityTranslator::create();
         $failed     = 0;
+        $authenticationFailed = false;
 
         foreach (EntityTypes::ids($input->getArgument('ids')) as $id) {
             foreach ($targets as $target) {
-                $label = sprintf('%s %d → %s', $type, $id, Settings::targetCode($target));
+                $label = sprintf('%s %d → %s', $type, $id, Settings::targetCodeOrNull($target) ?? Settings::localeOf($target));
 
                 try {
                     $result = $translator->translate($type, $id, $source, $target, (bool) $input->getOption('overwrite'), (int) $context->shop->id);
@@ -100,6 +105,11 @@ class TranslateCommand extends Command
                 } catch (SupertextException|\PrestaShopException $e) {
                     ++$failed;
                     $output->writeln(sprintf('<error>%s: %s</error>', $label, $e->getMessage()));
+
+                    if ($e instanceof SupertextException && $e->isAuthenticationFailure() && !$authenticationFailed) {
+                        $authenticationFailed = true;
+                        $reporting->authenticationFailed(Settings::apiKey(), $e->getCode() === 403 ? 403 : 401);
+                    }
                 }
             }
         }

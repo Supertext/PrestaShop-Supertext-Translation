@@ -21,7 +21,10 @@ use PrestaShop\PrestaShop\Adapter\SymfonyContainer;
 use PrestaShop\PrestaShop\Core\Grid\Action\Bulk\Type\SubmitBulkAction;
 use PrestaShop\PrestaShop\Core\Grid\Action\Row\Type\LinkRowAction;
 use PrestaShop\PrestaShop\Core\Grid\Definition\GridDefinitionInterface;
-use Supertext\PrestaShop\Api\SupertextException;
+use Supertext\PrestaShop\Api\LanguageCodes;
+use Supertext\PrestaShop\Api\Reporting;
+use Supertext\PrestaShop\Api\SupertextClient;
+use Supertext\PrestaShop\Sdk\V1\ApiKeyCheck;
 use Supertext\PrestaShop\Settings;
 
 class Supertext extends Module
@@ -63,7 +66,8 @@ class Supertext extends Module
             && $this->registerHook(self::HOOKS)
             && $this->grantViewToAllProfiles()
             && Configuration::updateGlobalValue(Settings::ENVIRONMENT, 'live')
-            && Configuration::updateGlobalValue(Settings::TIMEOUT, 180);
+            && Configuration::updateGlobalValue(Settings::TIMEOUT, 180)
+            && Configuration::updateGlobalValue(Settings::VERSION_REPORTS, 1);
     }
 
     /**
@@ -105,28 +109,48 @@ class Supertext extends Module
         $messages = '';
 
         if (Tools::isSubmit('submitSupertextSettings')) {
-            $messages .= $this->saveSettings();
+            [$html, $saved] = $this->saveSettings();
+            $messages .= $html;
+
+            if ($saved) {
+                // Commando Center: check the key and report the save (never blocks or fails saving).
+                $check = Settings::reporting()->afterSettingsSaved(Settings::apiKey())?->check;
+                $messages .= $check !== null ? $this->displayKeyCheck($check) : '';
+            }
         } elseif (Tools::isSubmit('submitSupertextTest')) {
-            $messages .= $this->testConnection();
+            $check = Settings::reporting()->testConnection(Settings::apiKey())?->check;
+            $messages .= $check !== null ? $this->displayKeyCheck($check) : $this->displayError($this->noKeyMessage());
+        } else {
+            Settings::reportAfterResponse();
         }
 
         $languages = [];
         $saved     = Settings::languages();
 
         foreach (Language::getLanguages(false) as $language) {
-            $id          = (int) $language['id_lang'];
+            $id       = (int) $language['id_lang'];
+            $locale   = Settings::localeOf(new Language($id));
+            $code     = $saved[$id]['code'] ?? '';
+            $tone     = $saved[$id]['tone'] ?? 'default';
+            $target   = LanguageCodes::targetOrNull($locale, $code);
+            $selected = $code !== '' ? $code : (string) LanguageCodes::match($locale);
+
             $languages[] = [
-                'id'          => $id,
-                'name'        => $language['name'],
-                'locale'      => \Supertext\PrestaShop\Api\LanguageCodes::target((string) ($language['locale'] ?: $language['language_code'])),
-                'code'        => $saved[$id]['code'] ?? '',
-                'tone'        => $saved[$id]['tone'] ?? 'default',
-                'isDefault'   => $id === (int) Configuration::get('PS_LANG_DEFAULT'),
-                'active'      => (bool) $language['active'],
+                'id'                => $id,
+                'name'              => $language['name'],
+                'locale'            => $locale,
+                'code'              => $selected,
+                'custom'            => $selected !== '' && !in_array($selected, array_column(LanguageCodes::targets(), 'code'), true),
+                'target'            => $target,
+                'tone'              => $tone,
+                'toneUnsupported'   => $tone !== 'default' && $target !== null && LanguageCodes::supportsPoliteness($target) === false,
+                'isDefault'         => $id === (int) Configuration::get('PS_LANG_DEFAULT'),
+                'active'            => (bool) $language['active'],
             ];
         }
 
-        $key = (string) Configuration::getGlobalValue(Settings::API_KEY);
+        $key   = (string) Configuration::getGlobalValue(Settings::API_KEY);
+        $check = Settings::reporting()->lastCheck();
 
         $this->context->smarty->assign([
             'st'           => [
@@ -138,7 +162,16 @@ class Supertext extends Module
                 'environment'    => Settings::environment(),
                 'endpoint'       => Settings::customEndpoint(),
                 'timeout'        => Settings::timeout(),
+                'keyCheck'       => $check === null ? null : [
+                    'status'  => $check->status,
+                    'message' => $this->keyCheckMessage($check),
+                    'time'    => Tools::displayDate(date('Y-m-d H:i:s', (int) strtotime($check->checkedAt)), true),
+                ],
+                'versionReports'        => Settings::versionReportsSetting(),
+                'versionReportsEnabled' => Settings::versionReportsEnabled(),
+                'versionReportsFromEnv' => Reporting::forcedByEnvironment(),
                 'languages'      => $languages,
+                'targets'        => LanguageCodes::targets(),
                 'languagesUrl'   => $this->context->link->getAdminLink('AdminLanguages'),
                 'signupUrl'      => Settings::SIGNUP_URL,
                 'apiKeyUrl'      => Settings::API_KEY_URL,
@@ -152,14 +185,15 @@ class Supertext extends Module
         return $messages . $this->display(__FILE__, 'views/templates/admin/configure.tpl');
     }
 
-    private function saveSettings(): string
+    /** @return array{0: string, 1: bool} the message and whether the settings were saved */
+    private function saveSettings(): array
     {
         $key = trim((string) Tools::getValue('api_key'));
 
         if (Tools::getValue('remove_api_key')) {
             Configuration::updateGlobalValue(Settings::API_KEY, '');
         } elseif ($key !== '') {
-            Configuration::updateGlobalValue(Settings::API_KEY, \Supertext\PrestaShop\Api\SupertextClient::normalizeKey($key));
+            Configuration::updateGlobalValue(Settings::API_KEY, SupertextClient::normalizeKey($key));
         }
 
         $environment = (string) Tools::getValue('environment');
@@ -168,11 +202,12 @@ class Supertext extends Module
         $endpoint = trim((string) Tools::getValue('endpoint'));
 
         if ($endpoint !== '' && !preg_match('#^https?://\S+$#i', $endpoint)) {
-            return $this->displayError($this->trans('The custom API base URL must start with https://.', [], 'Modules.Supertext.Admin'));
+            return [$this->displayError($this->trans('The custom API base URL must start with https://.', [], 'Modules.Supertext.Admin')), false];
         }
 
         Configuration::updateGlobalValue(Settings::ENDPOINT, $endpoint);
         Configuration::updateGlobalValue(Settings::TIMEOUT, max(30, min(1800, (int) Tools::getValue('timeout', 180))));
+        Configuration::updateGlobalValue(Settings::VERSION_REPORTS, Tools::getValue('version_reports') ? 1 : 0);
 
         $languages = [];
 
@@ -180,8 +215,8 @@ class Supertext extends Module
             $code = trim((string) ($row['code'] ?? ''));
             $tone = (string) ($row['tone'] ?? 'default');
 
-            if ($code !== '' && !preg_match('/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/', $code)) {
-                return $this->displayError($this->trans('"%code%" is not a valid language code. Use a code such as de-CH or fr.', ['%code%' => $code], 'Modules.Supertext.Admin'));
+            if ($code !== '' && !preg_match('/^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$/', $code)) {
+                return [$this->displayError($this->trans('"%code%" is not a valid language code. Use a code such as de-CH or fr.', ['%code%' => $code], 'Modules.Supertext.Admin')), false];
             }
 
             if ($code !== '' || $tone !== 'default') {
@@ -191,25 +226,37 @@ class Supertext extends Module
 
         Settings::saveLanguages($languages);
 
-        return $this->displayConfirmation($this->trans('Settings saved.', [], 'Modules.Supertext.Admin'));
+        return [$this->displayConfirmation($this->trans('Settings saved.', [], 'Modules.Supertext.Admin')), true];
     }
 
-    private function testConnection(): string
+    /** The key check as a notice: success, warning (Supertext unreachable or an error) or error (rejected, missing). */
+    private function displayKeyCheck(ApiKeyCheck $check): string
     {
-        if (Settings::apiKey() === '') {
-            return $this->displayError($this->noKeyMessage());
-        }
+        $message = $this->keyCheckMessage($check);
 
-        try {
-            Settings::client()->validateApiKey();
-        } catch (SupertextException $e) {
-            $message = $this->trans($e->template(), $e->parameters(), 'Modules.Supertext.Admin');
-            $message .= $e->detail() !== '' ? ' (' . $e->detail() . ')' : '';
+        return match ($check->status) {
+            ApiKeyCheck::OK                         => $this->displayConfirmation($message),
+            ApiKeyCheck::INVALID, ApiKeyCheck::MISSING => $this->displayError($message),
+            default                                 => $this->displayWarning($message),
+        };
+    }
 
-            return $this->displayError(htmlspecialchars($message, ENT_QUOTES, 'UTF-8'));
-        }
+    /** The Commando Center's key-check messages, with the account and API key links for "invalid" and "missing" (HTML). */
+    private function keyCheckMessage(ApiKeyCheck $check): string
+    {
+        $links = [
+            '%signup%' => '<a href="' . Settings::SIGNUP_URL . '" target="_blank" rel="noopener">supertext.com</a>',
+            '%apikey%' => '<a href="' . Settings::API_KEY_URL . '" target="_blank" rel="noopener">supertext.com → Integrations → API</a>',
+        ];
+        $status = htmlspecialchars((string) ($check->httpStatus ?? $check->errorCode ?? '?'), ENT_QUOTES, 'UTF-8');
 
-        return $this->displayConfirmation($this->trans('Connected. The API key works.', [], 'Modules.Supertext.Admin'));
+        return match ($check->status) {
+            ApiKeyCheck::OK          => $this->trans('API key checked: the connection to Supertext works.', [], 'Modules.Supertext.Admin'),
+            ApiKeyCheck::INVALID     => $this->trans('Supertext rejected the API key. Check that you copied the whole key, or generate a new one at %apikey% (requires the Admin role). No Supertext account yet? Create one at %signup%.', $links, 'Modules.Supertext.Admin'),
+            ApiKeyCheck::MISSING     => $this->trans('No API key is set yet. No Supertext account yet? Create one at %signup%. Generate your API key at %apikey% (requires the Admin role).', $links, 'Modules.Supertext.Admin'),
+            ApiKeyCheck::UNREACHABLE => $this->trans('The API key couldn\'t be checked because Supertext can\'t be reached. The settings are saved; check again later.', [], 'Modules.Supertext.Admin'),
+            default                  => $this->trans('The API key couldn\'t be checked: Supertext answered with an error (%status%). The settings are saved; check again later.', ['%status%' => $status], 'Modules.Supertext.Admin'),
+        };
     }
 
     private function noKeyMessage(): string

@@ -49,11 +49,11 @@ async function session(email, password) {
   await page.waitForLoadState('networkidle')
   await page.locator('button[name=submitSupertextTest]').click()
   await page.waitForLoadState('networkidle')
-  await page.locator('text=Connected. The API key works.').first().waitFor()
+  await page.locator('text=API key checked: the connection to Supertext works.').first().waitFor()
   await shot('module-settings', union(await box('.alert-success', 2), await box('#supertext-connection', 2)))
 
   // An example override: formal German (not saved).
-  await page.locator('#supertext-languages select').nth(1).selectOption('more')
+  await page.locator('#supertext-languages select[name$="[tone]"]').nth(1).selectOption('more')
   await page.locator('#supertext-languages').evaluate((e) => e.scrollIntoView({ block: 'start' }))
   await shot('module-languages', union(await box('#supertext-languages', 2), await box('#supertext-languages table', 2), await box('#supertext-languages .panel-footer', 2)))
 

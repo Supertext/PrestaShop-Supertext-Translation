@@ -9,6 +9,7 @@ parameters:
     paths:
         - supertext/supertext.php
         - supertext/src
+        - supertext/controllers
     bootstrapFiles:
         - tests/phpstan/bootstrap.php
     tmpDir: .phpstan-cache

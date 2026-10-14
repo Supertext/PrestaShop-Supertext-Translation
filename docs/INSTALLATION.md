@@ -44,7 +44,7 @@ The module settings link to both pages, next to the API key field.
 *Modules → Module Manager*, search for **Supertext Translation** and click **Configure**:
 
 1. Paste your key into **Supertext API key** and click **Save**. You can paste it exactly as Supertext shows it, with the leading `Supertext-Auth-Key`, or without it. The field stays empty afterwards and shows the key's last characters; leave it empty to keep the saved key.
-2. Click **Test connection**. *Connected. The API key works.* means everything is in place.
+2. Saving checks the key right away (Supertext's cost-free `features` call; nothing is translated or billed). *API key checked: the connection to Supertext works.* means everything is in place. **Test connection** runs the same check again at any time. The latest result stays visible under **API key check**, with the time it was checked.
 
 <img src="images/module-settings.png" alt="Module settings: the message Connected. The API key works., the saved Supertext API key, links to create a Supertext account and to generate the key, API environment Live (api.supertext.com), an empty custom API base URL and a timeout of 180 seconds, with the Test connection and Save buttons" width="720">
 
@@ -61,12 +61,23 @@ The module translates into your shop's **languages**: every product, category an
 
 When you add a language, PrestaShop copies the default language's texts into it. The module treats a text that is still identical to the source language as *not translated* and fills it.
 
-### Language codes and tone
+### Supertext language and tone
 
-By default the language's **locale** (e.g. `de-CH`, `fr-CH`) is sent to Supertext as the target language. Supertext needs a region in the target language, so a locale without one gets a regional default (`de` → `de-DE`, `en` → `en-US`, `fr` → `fr-FR`, `pt` → `pt-PT`, …). As source language only the language is sent (`en-GB` → `en`). In the module settings' **Languages** panel you can, per language:
+Each shop language needs a **Supertext language**. Supertext accepts exactly these target codes (from its `features` list, October 2026):
 
-- send a **different code**, e.g. `fr-CH` for a language whose locale is `fr-FR` (a code without a region gets the same regional default; as source, only its language counts), and
-- choose the **tone**: *Formal (Sie, vous)*, *Informal (du, tu)* or the Supertext default.
+| Language | Supertext codes |
+| --- | --- |
+| German, English, French, Italian, Portuguese | `de-DE`, `de-CH`, `de-AT`, `en-US`, `en-GB`, `fr-FR`, `fr-CH`, `it-IT`, `it-CH`, `pt-PT`, `pt-BR` |
+| Chinese, Serbian | `zh-Hans`, `zh-Hant`, `sr-Latn`, `sr-Cyrl` |
+| Swiss German | `gsw-u-sd-chzh` (Zurich), `gsw-u-sd-chbe` (Bern) |
+| All others, without region | `bg`, `cs`, `da`, `el`, `es`, `fi`, `hr`, `hu`, `ja`, `ko`, `nb`, `nl`, `pl`, `rm`, `ru`, `sk`, `sl`, `sq`, `sv`, `tr` |
+
+In the module settings' **Languages** panel, choose per shop language:
+
+- the **Supertext language** from Supertext's list. A language whose **locale** already is one of these codes (apart from upper/lower case and `_`/`-`: `de-CH`, `fr-CH`, `es`) is preselected. Every other locale needs a choice: PrestaShop's `de`, `es-ES`, `nl-NL` or `zh-CN` aren't Supertext codes, and the module **never guesses** a region (whether `de` means Germany or Switzerland is your decision). A language without a Supertext language is marked *Not mapped*, can't be ticked on the *Translate with Supertext* page and nothing is sent for it. The same choice is used when the language is the source: only its language is sent (`de-CH` → `de`, `en-US` → `en`).
+- the **tone**: *Formal (Sie, vous)*, *Informal (du, tu)* or *Supertext default*. Supertext offers no formal/informal choice for English, Swiss German, Romansh, Albanian and Serbian; the panel warns when one of those is set to formal or informal, and translating would fail with *Supertext offers no formal or informal tone for this language*, so set them to *Supertext default*.
+
+A code you saved before that isn't in the list (for example one Supertext added later) stays selected and is sent as it is.
 
 <img src="images/module-languages.png" alt="Languages panel of the module settings: English, Deutsch (Schweiz), Français (Suisse) and Italiano (Svizzera) with their locales, an empty Supertext language code field each and the tone; German is set to Formal (Sie, vous)" width="720">
 
@@ -98,9 +109,35 @@ The module's screens (settings page, *Translate with Supertext* page, list actio
 | API environment | Live | `Live` (api.supertext.com), `Staging` or `Testing` Supertext API |
 | Custom API base URL | – | Overrides the environment (e.g. a test server). The `SUPERTEXT_API_ENDPOINT` environment variable wins. |
 | Timeout | 180 s | Maximum wait for one translation (30–1800 s) |
-| Languages | – | Per shop language: Supertext language code (default: the locale) and tone |
+| Send version information to Supertext | On | Sends the site URL and the versions of this module, PrestaShop and PHP to Supertext when you save the settings and after an update (see [below](#version-information-and-the-api-key-check)). The `SUPERTEXT_VERSION_REPORTS` environment variable wins (`0`, `false`, `off`, `no` or `1`, `true`, `on`, `yes`). |
+| Languages | – | Per shop language: its Supertext language (preselected when the locale is a Supertext code; otherwise required, see [Supertext language and tone](#supertext-language-and-tone)) and tone |
 
 Settings are global (the same for all shops of a multistore installation).
+
+## Version information and the API key check
+
+**Send version information to Supertext** is on by default. The module then tells Supertext which versions you run, so Supertext support can help you faster: when you save the module settings, and when a back-office page of the module (settings, *Translate with Supertext*, a translation, the `supertext:translate` command) notices that the module, PrestaShop or PHP was updated or that the result of the API key check changed. A report contains exactly:
+
+- the shop's URL (the default shop's domain and base URI, as PrestaShop knows it),
+- the module's name and version, the PrestaShop version, the PHP version and the version of the bundled Supertext SDK,
+- whether an API key is set and the result of the latest API key check (status, time, HTTP status, Supertext's error code),
+- the address of the ping endpoint below.
+
+**No content, no API key and no personal data are sent.** Reports go from your server, never from the browser; a report takes at most 3 seconds, a failed one is not tried again for an hour, and reporting never slows down or breaks saving or translating (where PHP runs as PHP-FPM, it happens after the page has been sent). To turn it off, untick the setting and save, or set the environment variable `SUPERTEXT_VERSION_REPORTS=0` on the server (it wins over the setting, and the settings page says so). Then nothing is sent at all, and the ping endpoint answers 404.
+
+**The API key check** runs whether or not version information is sent: when you save the settings, on **Test connection**, when a back-office page of the module runs with a key that hasn't been checked yet (e.g. a new `SUPERTEXT_API_KEY`; the module compares a fingerprint of the key, never stores the key itself for this), and when Supertext rejects the key during a translation. It's Supertext's cost-free `features` call. The settings page shows the latest result with its time:
+
+| Result | Message |
+| --- | --- |
+| ok | *API key checked: the connection to Supertext works.* |
+| invalid | *Supertext rejected the API key. …* (with the links to generate a key and to create an account) |
+| missing | *No API key is set yet. …* (with the same links) |
+| unreachable | *The API key couldn't be checked because Supertext can't be reached. …* |
+| error | *The API key couldn't be checked: Supertext answered with an error (…).* |
+
+**The ping endpoint** `https://<your shop>/index.php?fc=module&module=supertext&controller=ping&challenge=…` is public (no login) and answers only `{"ok":true,"plugin":"PrestaShop-Supertext-Translation","challenge":"…"}`, so Supertext can see that the shop is reachable from the internet. It returns nothing else: no versions, no settings, no data, and it skips PrestaShop's storefront (no cookie, cart, maintenance page or redirect). If a firewall or a full-page cache sits in front of the shop, let this URL through uncached.
+
+The module keeps this state (what was reported last, the latest key check, the key's fingerprint) in the configuration value `SUPERTEXT_REPORTER_STATE`; uninstalling removes it.
 
 ## Updating
 
@@ -115,10 +152,14 @@ Upload the new zip in *Modules → Module Manager → Upload a module* (or repla
 | Message | Cause / fix |
 | --- | --- |
 | *Supertext is not set up yet* | No API key: enter it in the module settings (step 2), or set `SUPERTEXT_API_KEY`. |
-| *Authentication failed* | The key is wrong or revoked. Check it with **Test connection**; if needed, generate a new one at [supertext.com → Integrations → API](https://www.supertext.com/en/integrations/api) (Admin role required). |
+| *Authentication failed* / *Supertext rejected the API key* | The key is wrong or revoked. Check that you copied the whole key and run **Test connection**; if needed, generate a new one at [supertext.com → Integrations → API](https://www.supertext.com/en/integrations/api) (Admin role required). No Supertext account yet? [Create one at supertext.com](https://www.supertext.com/person/en/account/signin). |
+| *The API key couldn't be checked because Supertext can't be reached* | The server can't reach `api.supertext.com` (firewall, proxy, DNS). Translations need the same connection. |
+| *The API key couldn't be checked: Supertext answered with an error (…)* | Usually temporary; run **Test connection** again later. If it stays, contact Supertext with the code shown. |
 | *You are not allowed to edit this item* | The employee's profile lacks *Edit* permission (see *Who can translate*). |
 | *The translation could not be saved: …* | PrestaShop rejected a translated value (e.g. a field it validates strictly). The message names the field; translate it by hand or report it to Supertext. |
-| *Supertext does not support this language pair (en → xx-YY)* | The shop language (or its Supertext language code in the module settings) isn't one Supertext offers. Set a code such as `de-CH` or `fr`; the message shows the codes that were sent. |
+| *The language … has no Supertext language yet* / *Not mapped* in the Languages panel | The language's locale isn't a Supertext code (e.g. `de`, `es-ES`). Choose its Supertext language in the module settings (see [Supertext language and tone](#supertext-language-and-tone)). |
+| *Supertext does not support this language pair (en → xx-YY)* | A saved Supertext language that Supertext doesn't offer, or the same language as the source. Choose another one from the list; the message shows the codes that were sent. |
+| *Supertext offers no formal or informal tone for this language* | The language's tone is *Formal* or *Informal*, but Supertext doesn't offer that for it (English, Swiss German, Romansh, Albanian, Serbian). Set it to *Supertext default*. |
 | *Too many requests to Supertext* | Supertext's per-second limit was still exceeded after 4 automatic retries. Wait a moment and translate again. |
 | *Your Supertext translation limit is exceeded* | Your Supertext plan's volume is used up. |
 | *Timed out waiting* | Very long descriptions: raise the *Timeout* (and PHP's `max_execution_time`). |

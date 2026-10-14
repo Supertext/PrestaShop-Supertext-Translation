@@ -4,11 +4,16 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Changed: **languages are no longer guessed.** The *Languages* panel now has a **Supertext language** list (Supertext's own codes) per shop language instead of a free-text code. A locale that is a Supertext code (`de-CH`, `fr-CH`, `es`, apart from case and `_`/`-`) is preselected; every other locale (`de`, `es-ES`, `zh-CN`) needs a choice. The default regions are gone: they were wrong for most languages (Supertext wants `es`, `sl`, `nl` without region, `zh-Hans` instead of `zh-CN`). A language without a Supertext language is marked *Not mapped*, can't be ticked on the translate page and gets the message *has no Supertext language yet*; nothing is sent for it. Codes saved before keep working. The panel warns when a formal or informal tone is set for a language Supertext offers none for, with its own message *Supertext offers no formal or informal tone for this language*. All new texts in English, German, French and Italian.
+- Added: automatic **API key check** (Supertext's cost-free `features` call) when the settings are saved, on *Test connection*, for a key that hasn't been checked yet and when Supertext rejects the key during a translation. The settings page shows the latest result with its time; *Test connection* shows the same messages.
+- Added: **Send version information to Supertext** (on by default; `SUPERTEXT_VERSION_REPORTS=0` turns it off): when the settings are saved and after an update, the module sends the shop URL, the module, PrestaShop, PHP and SDK versions, whether a key is set, the key check result and the ping address to Supertext. No content, no API key and no personal data.
+- Added: public ping endpoint `index.php?fc=module&module=supertext&controller=ping`, which only echoes Supertext's challenge so Supertext can check that the shop is reachable (404 with version information off).
+- Changed: bundled Supertext SDK 0.2.1 (commit `eeba8fa`, `V1` namespace) with the language list, the key check and the version reports.
+- Changed: the *no API key* and *authentication failed* messages also link to the Supertext account page.
 - Changed: all Supertext API calls now go through the official Supertext PHP SDK, shipped inside the module (nothing extra to install). The module now needs PHP's curl extension, which PrestaShop requires anyway.
 - Added: its own message for an unsupported language pair, naming the codes ("Supertext does not support this language pair (en → xx-YY)"), in English, German, French and Italian.
-- Fixed: target languages without a region (e.g. a locale `de`) are now sent as `de-DE` (Supertext rejects bare targets), and the source language is taken from the locale instead of PrestaShop's ISO code, which is country-like for some languages (`gb` for English (UK)).
+- Fixed: the source language is taken from the locale instead of PrestaShop's ISO code, which is country-like for some languages (`gb` for English (UK)).
 - Added: French and Italian interface (and German, which was missing). The module's screens and messages, including errors from Supertext, follow the employee's back-office language (translations shipped for de-DE, de-AT, de-CH, fr-FR, fr-BE, fr-CA, fr-CH, it-IT, it-CH).
-- Fixed: a Supertext code with a variant in the module settings (e.g. `de_DE_formal`) is sent to Supertext as `de-DE`.
 - Demo: the public host name comes from `PRESTASHOP_DOMAIN` (or Railway's domain) instead of `PS_DOMAIN`, which the base image sets to a placeholder; the demo now runs on Railway.
 
 ## 0.1.0 — 2026-10-08

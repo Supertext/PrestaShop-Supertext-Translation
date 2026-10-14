@@ -85,6 +85,7 @@ jobs:
             -e DB_SERVER=127.0.0.1 -e DB_PASSWD=admin -e PS_INSTALL_AUTO=1 -e PS_DOMAIN=localhost \
             -e PS_COUNTRY=CH -e PS_FOLDER_ADMIN=admin-ci -e ADMIN_MAIL=installer@example.com -e ADMIN_PASSWD=Installer-Ci-2026! \
             -e SUPERTEXT_API_KEY="Supertext-Auth-Key ci-key" -e SUPERTEXT_API_ENDPOINT=http://127.0.0.1:8765/v1/ \
+            -e SUPERTEXT_REPORT_URL=http://127.0.0.1:8765/report \
             "$PS_IMAGE"
           # Wait for the installer. The 9.x image may exit after installing (it tries to remove an
           # install folder the installer already removed); then just start it again.
@@ -127,5 +128,15 @@ jobs:
         run: |
           product=$(docker exec db mariadb -uroot -padmin prestashop -N -e "SELECT id_product FROM ps_product WHERE reference='ST-DEMO-PRALINES'")
           docker exec ps runuser -u www-data --preserve-environment -- php /var/www/html/bin/console supertext:translate product "$product" | grep -c skipped | grep -q 3
+      - name: Commando Center (version report to the stand-in, public ping)
+        run: |
+          reports=$(curl -fsS http://127.0.0.1:8765/reports)
+          echo "$reports"
+          echo "$reports" | jq -e 'map(select(.event == "installed" and .plugin.name == "PrestaShop-Supertext-Translation" and .system.name == "PrestaShop" and .api_key_check.status == "ok" and (.callback.url | endswith("index.php?fc=module&module=supertext&controller=ping")))) | length == 1'
+          if grep -qF 'ci-key' <<< "$reports"; then echo "API key in a report" >&2; exit 1; fi
+          ping=$(curl -sS -D headers.txt 'http://localhost/index.php?fc=module&module=supertext&controller=ping&challenge=ci-challenge-0123456789')
+          test "$ping" = '{"ok":true,"plugin":"PrestaShop-Supertext-Translation","challenge":"ci-challenge-0123456789"}'
+          grep -qi '^cache-control: no-store' headers.txt
+          test "$(curl -s -o /dev/null -w '%{http_code}' 'http://localhost/index.php?fc=module&module=supertext&controller=ping&challenge=bad')" = 400
       - if: failure()
         run: cat standin.log; docker logs ps 2>&1 | tail -80

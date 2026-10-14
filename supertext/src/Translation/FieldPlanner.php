@@ -8,8 +8,8 @@
 
 namespace Supertext\PrestaShop\Translation;
 
-use Supertext\PrestaShop\Sdk\HtmlDocument;
-use Supertext\PrestaShop\Sdk\Segment;
+use Supertext\PrestaShop\Sdk\V1\HtmlDocument;
+use Supertext\PrestaShop\Sdk\V1\Segment;
 
 /**
  * Decides which fields of one item go to Supertext and what is written back.

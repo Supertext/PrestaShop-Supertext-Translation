@@ -4,46 +4,69 @@ namespace Supertext\PrestaShop\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Supertext\PrestaShop\Api\LanguageCodes;
+use Supertext\PrestaShop\Api\SupertextException;
 
+/** Shop language → Supertext code: the setting, else an exact match, else unsupported_language. Never guessed. */
 final class LanguageCodesTest extends TestCase
 {
-    public function testBareSourceStaysBare(): void
+    public function testLocaleThatIsASupertextCodeIsUsed(): void
     {
-        self::assertSame('en', LanguageCodes::source('en'));
+        self::assertSame('de-CH', LanguageCodes::target('de-CH'));
+        self::assertSame('fr-CH', LanguageCodes::target('fr_ch'));
+        self::assertSame('es', LanguageCodes::target('ES'));
+        self::assertSame('zh-Hant', LanguageCodes::target('zh_hant'));
     }
 
-    public function testRegionalSourceBecomesBare(): void
+    public function testNoDefaultRegions(): void
+    {
+        foreach (['de', 'es-ES', 'sl-SI', 'zh-CN', 'xx'] as $locale) {
+            self::assertNull(LanguageCodes::targetOrNull($locale), $locale);
+        }
+    }
+
+    public function testUnmappedLanguageIsAnUnsupportedLanguage(): void
+    {
+        try {
+            LanguageCodes::target('es-ES');
+            self::fail('Expected an exception');
+        } catch (SupertextException $e) {
+            self::assertSame('unsupported_language', $e->errorCode());
+            self::assertSame('The language %language% has no Supertext language yet. Ask your administrator to map it in the module settings (Languages → Supertext language).', $e->template());
+            self::assertSame(['%language%' => 'es-ES'], $e->parameters());
+            self::assertSame('', $e->detail());
+        }
+    }
+
+    public function testTheSettingWins(): void
+    {
+        self::assertSame('es', LanguageCodes::target('es-ES', 'es'));
+        self::assertSame('de-AT', LanguageCodes::target('de-DE', 'de-AT'));
+        self::assertSame('gsw-u-sd-chzh', LanguageCodes::target('de-CH', 'gsw-u-sd-chzh'));
+        // A code Supertext adds later is sent as it is.
+        self::assertSame('uk', LanguageCodes::target('uk-UA', 'uk'));
+    }
+
+    public function testSourceIsBareAndUsesTheSameSetting(): void
     {
         self::assertSame('en', LanguageCodes::source('en-US'));
         self::assertSame('en', LanguageCodes::source('en_GB'));
-        self::assertSame('de', LanguageCodes::source('DE-CH'));
+        self::assertSame('de', LanguageCodes::source('de'));
+        self::assertSame('es', LanguageCodes::source('es-ES'));
+        self::assertSame('de', LanguageCodes::source('xx', 'de-CH'));
         self::assertSame('', LanguageCodes::source(''));
     }
 
-    public function testBareTargetGetsDefaultRegion(): void
+    public function testMatchPrefillsTheSetting(): void
     {
-        self::assertSame('de-DE', LanguageCodes::target('de'));
-        self::assertSame('en-US', LanguageCodes::target('EN'));
-        self::assertSame('sl-SI', LanguageCodes::target('sl'));
+        self::assertSame('de-CH', LanguageCodes::match('de-ch'));
+        self::assertNull(LanguageCodes::match('de'));
+        self::assertContains('nb', array_column(LanguageCodes::targets(), 'code'));
     }
 
-    public function testRegionalTargetIsKeptAndNormalized(): void
+    public function testPoliteness(): void
     {
-        self::assertSame('de-CH', LanguageCodes::target('de_ch'));
-        self::assertSame('fr-CH', LanguageCodes::target('fr-CH'));
-        self::assertSame('zh-Hant', LanguageCodes::target('zh_hant'));
-        self::assertSame('es-419', LanguageCodes::target('es-419'));
-    }
-
-    public function testOverrideWins(): void
-    {
-        self::assertSame('de-AT', LanguageCodes::target('de-DE', 'de_at'));
-        self::assertSame('de-DE', LanguageCodes::target('de-CH', 'de'));
-        self::assertSame('pt', LanguageCodes::source('en-GB', 'pt-BR'));
-    }
-
-    public function testUnknownBareCodeIsUnchanged(): void
-    {
-        self::assertSame('rm', LanguageCodes::target('rm'));
+        self::assertTrue(LanguageCodes::supportsPoliteness('de-CH'));
+        self::assertFalse(LanguageCodes::supportsPoliteness('en-US'));
+        self::assertNull(LanguageCodes::supportsPoliteness('xx'));
     }
 }

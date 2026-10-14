@@ -22,6 +22,14 @@
         <source>API environment</source>
         <target>API-Umgebung</target>
       </trans-unit>
+      <trans-unit id="64ec8a79bcc7dd6034d0efe0342082b9">
+        <source>API key check</source>
+        <target>Prüfung des API-Schlüssels</target>
+      </trans-unit>
+      <trans-unit id="461c75449cfd73fc9a54a66cea8db019">
+        <source>API key checked: the connection to Supertext works.</source>
+        <target>API-Schlüssel geprüft: Die Verbindung zu Supertext funktioniert.</target>
+      </trans-unit>
       <trans-unit id="2c9f0fde2325cd6ef9a5c11e70837752">
         <source>Already translated, unchanged</source>
         <target>Bereits übersetzt, unverändert</target>
@@ -30,21 +38,21 @@
         <source>An administrator needs to enter the API key in the %link%module settings%end%.</source>
         <target>Ein Administrator muss den API-Schlüssel in den %link%Moduleinstellungen%end% eingeben.</target>
       </trans-unit>
-      <trans-unit id="e69649b71afb5389e34d02219f6d4631">
-        <source>Authentication failed. Please check the Supertext API key. A new key can be generated at https://www.supertext.com/en/integrations/api (requires the Admin role).</source>
-        <target>Authentifizierung fehlgeschlagen. Bitte prüfen Sie den Supertext API-Schlüssel. Einen neuen Schlüssel können Sie unter https://www.supertext.com/en/integrations/api erzeugen (erfordert die Admin-Rolle).</target>
+      <trans-unit id="a8d455adbc324fba3c8ec715a697d519">
+        <source>Authentication failed. Please check the Supertext API key. A new key can be generated at https://www.supertext.com/en/integrations/api (requires the Admin role). No Supertext account yet? Create one at https://www.supertext.com/person/en/account/signin.</source>
+        <target>Authentifizierung fehlgeschlagen. Bitte prüfen Sie den Supertext API-Schlüssel. Einen neuen Schlüssel können Sie unter https://www.supertext.com/en/integrations/api erzeugen (erfordert die Admin-Rolle). Noch kein Supertext-Konto? Erstellen Sie eines auf https://www.supertext.com/person/en/account/signin.</target>
       </trans-unit>
       <trans-unit id="07fc7dc79c8046bb36d97b4332dab1ca">
         <source>Back to the list</source>
         <target>Zurück zur Liste</target>
       </trans-unit>
-      <trans-unit id="3dae40c59204be34c002a3fe7effdec4">
-        <source>By default the locale of the language (e.g. de-CH) is sent; enter a different code to override it, e.g. fr-CH for Swiss French.</source>
-        <target>Standardmässig wird das Gebietsschema der Sprache gesendet (z. B. de-CH). Geben Sie einen anderen Code ein, um es zu ersetzen, z. B. fr-CH für Schweizer Französisch.</target>
-      </trans-unit>
       <trans-unit id="af1b98adf7f686b84cd0b443e022b7a0">
         <source>Categories</source>
         <target>Kategorien</target>
+      </trans-unit>
+      <trans-unit id="1ed4509970862e9c15106bdef0b4ef24">
+        <source>Checked %time%</source>
+        <target>Geprüft: %time%</target>
       </trans-unit>
       <trans-unit id="95a3eebb9119fe75dfe88d9da7beb530">
         <source>Choose a target language other than the source language.</source>
@@ -54,9 +62,9 @@
         <source>Choose at least one language to translate into.</source>
         <target>Wählen Sie mindestens eine Sprache, in die übersetzt werden soll.</target>
       </trans-unit>
-      <trans-unit id="39fb3d5d2e5907b923e19f8f0915d192">
-        <source>Connected. The API key works.</source>
-        <target>Verbunden. Der API-Schlüssel funktioniert.</target>
+      <trans-unit id="1dd1623a2915cf9b29cc98cc39d11b63">
+        <source>Choose the Supertext language for each shop language. A locale that is a Supertext language (e.g. de-CH, es) is preselected; other locales (e.g. de, es-ES) need a choice, otherwise that language isn't translated.</source>
+        <target>Wählen Sie für jede Shop-Sprache die Supertext-Sprache. Ein Gebietsschema, das eine Supertext-Sprache ist (z. B. de-CH, es), ist vorausgewählt; andere Gebietsschemas (z. B. de, es-ES) brauchen eine Auswahl, sonst wird diese Sprache nicht übersetzt.</target>
       </trans-unit>
       <trans-unit id="f2ddf2d5009d9038a211ae1863b58a9d">
         <source>Could not reach Supertext: %error%</source>
@@ -146,9 +154,13 @@
         <source>No API key is saved yet.</source>
         <target>Es ist noch kein API-Schlüssel gespeichert.</target>
       </trans-unit>
-      <trans-unit id="a536200472eae369b8d7260b1eed036b">
-        <source>No Supertext API key is configured. Generate one at https://www.supertext.com/en/integrations/api (requires the Admin role).</source>
-        <target>Es ist kein Supertext API-Schlüssel konfiguriert. Erzeugen Sie einen unter https://www.supertext.com/en/integrations/api (erfordert die Admin-Rolle).</target>
+      <trans-unit id="8bc22d1f5d2c12452510087c7a50e496">
+        <source>No API key is set yet. No Supertext account yet? Create one at %signup%. Generate your API key at %apikey% (requires the Admin role).</source>
+        <target>Es ist noch kein API-Schlüssel eingetragen. Noch kein Supertext-Konto? Erstellen Sie eines auf %signup%. Ihren API-Schlüssel erstellen Sie unter %apikey% (erfordert die Rolle Admin).</target>
+      </trans-unit>
+      <trans-unit id="efc3b654f1266d5251a3912282a38a91">
+        <source>No Supertext API key is configured. No Supertext account yet? Create one at https://www.supertext.com/person/en/account/signin. Generate your API key at https://www.supertext.com/en/integrations/api (requires the Admin role).</source>
+        <target>Es ist kein Supertext API-Schlüssel konfiguriert. Noch kein Supertext-Konto? Erstellen Sie eines auf https://www.supertext.com/person/en/account/signin. Erzeugen Sie Ihren API-Schlüssel unter https://www.supertext.com/en/integrations/api (erfordert die Admin-Rolle).</target>
       </trans-unit>
       <trans-unit id="8e33f8f2eddea26f6960be29ad311ce4">
         <source>No Supertext account yet?</source>
@@ -157,6 +169,22 @@
       <trans-unit id="394aa8b7aba8b5f9ae53281412bfba04">
         <source>No Supertext account yet? Create one at %signup%. Generate your API key at %apikey% (requires the Admin role).</source>
         <target>Noch kein Supertext-Konto? Erstellen Sie eines auf %signup%. Erzeugen Sie Ihren API-Schlüssel unter %apikey% (erfordert die Admin-Rolle).</target>
+      </trans-unit>
+      <trans-unit id="b9b98b12dc64308f60350e80e69cccac">
+        <source>No Supertext language yet: an administrator needs to choose one in the module settings.</source>
+        <target>Noch keine Supertext-Sprache: Ein Administrator muss sie in den Moduleinstellungen wählen.</target>
+      </trans-unit>
+      <trans-unit id="e60304f10775d8e6769660f6e20e7744">
+        <source>Not checked yet. It is checked when you save these settings or test the connection.</source>
+        <target>Noch nicht geprüft. Der Schlüssel wird geprüft, wenn Sie diese Einstellungen speichern oder die Verbindung testen.</target>
+      </trans-unit>
+      <trans-unit id="7f7d2ea8e94639ce639ba271c1a3196e">
+        <source>Not mapped</source>
+        <target>Nicht zugeordnet</target>
+      </trans-unit>
+      <trans-unit id="20028685df3eebd14f6908235b9852f0">
+        <source>Not mapped: choose a Supertext language, or this language isn't translated.</source>
+        <target>Nicht zugeordnet: Wählen Sie eine Supertext-Sprache, sonst wird diese Sprache nicht übersetzt.</target>
       </trans-unit>
       <trans-unit id="908c0345c3cc55c54abc25a083f7ce50">
         <source>Not translated</source>
@@ -214,6 +242,14 @@
         <source>Select at least one item to translate.</source>
         <target>Wählen Sie mindestens einen Eintrag zum Übersetzen aus.</target>
       </trans-unit>
+      <trans-unit id="e390447c5c1a2f2e58e59211c8a05d87">
+        <source>Send version information to Supertext</source>
+        <target>Versionsinformationen an Supertext senden</target>
+      </trans-unit>
+      <trans-unit id="12d513cb6f6e2af8549c90f83e45785e">
+        <source>Sends the site URL and the versions of this module, the shop and the runtime to Supertext when you save these settings and after an update, so Supertext support can see which version you run. No content, no API key and no personal data are sent.</source>
+        <target>Sendet die URL der Website sowie die Versionen dieses Moduls, des Shops und der Laufzeitumgebung an Supertext, wenn Sie diese Einstellungen speichern und nach einem Update. So sieht der Supertext-Support, welche Version Sie einsetzen. Es werden keine Inhalte, kein API-Schlüssel und keine Personendaten übertragen.</target>
+      </trans-unit>
       <trans-unit id="4d49c18411e89604e450387e428e53d8">
         <source>Set by the SUPERTEXT_API_KEY environment variable on the server.</source>
         <target>Über die Umgebungsvariable SUPERTEXT_API_KEY auf dem Server gesetzt.</target>
@@ -254,6 +290,10 @@
         <source>Supertext did not return a file id.</source>
         <target>Supertext hat keine Datei-ID zurückgegeben.</target>
       </trans-unit>
+      <trans-unit id="b66b7d08b17c16ead7f57312ea39cd66">
+        <source>Supertext does not support this language pair (%source% → %target%). Check the Supertext language in the module settings.</source>
+        <target>Supertext unterstützt dieses Sprachpaar nicht (%source% → %target%). Prüfen Sie die Supertext-Sprache in den Moduleinstellungen.</target>
+      </trans-unit>
       <trans-unit id="56638e3fd39841743ee6cdda6ab0cd57">
         <source>Supertext is not set up yet.</source>
         <target>Supertext ist noch nicht eingerichtet.</target>
@@ -262,9 +302,21 @@
         <source>Supertext is not set up yet: an administrator needs to enter the API key in the module settings.</source>
         <target>Supertext ist noch nicht eingerichtet: Ein Administrator muss den API-Schlüssel in den Moduleinstellungen eingeben.</target>
       </trans-unit>
-      <trans-unit id="d51d913b61a93abb5dfec2c6381aa110">
-        <source>Supertext language code</source>
-        <target>Supertext-Sprachcode</target>
+      <trans-unit id="2236f12b896f2691a7f57d90fc79ab83">
+        <source>Supertext language</source>
+        <target>Supertext-Sprache</target>
+      </trans-unit>
+      <trans-unit id="d3dc84627b4bb125f20601b6d39ca92f">
+        <source>Supertext offers no formal or informal tone for this language. Set its tone to "Supertext default" in the module settings.</source>
+        <target>Supertext bietet für diese Sprache keine formelle oder informelle Anrede an. Stellen Sie ihre Tonalität in den Moduleinstellungen auf «Supertext-Standard».</target>
+      </trans-unit>
+      <trans-unit id="cf289abb6f6ff214cb610dac3f82a477">
+        <source>Supertext offers no formal/informal choice for this language: choose "Supertext default".</source>
+        <target>Supertext bietet für diese Sprache keine formelle/informelle Anrede an: Wählen Sie «Supertext-Standard».</target>
+      </trans-unit>
+      <trans-unit id="e75713efc45ecee5263a2ac9b80ef578">
+        <source>Supertext rejected the API key. Check that you copied the whole key, or generate a new one at %apikey% (requires the Admin role). No Supertext account yet? Create one at %signup%.</source>
+        <target>Supertext hat den API-Schlüssel abgelehnt. Prüfen Sie, ob Sie den ganzen Schlüssel kopiert haben, oder erstellen Sie einen neuen unter %apikey% (erfordert die Rolle Admin). Noch kein Supertext-Konto? Erstellen Sie eines auf %signup%.</target>
       </trans-unit>
       <trans-unit id="b3b0016376d7b51e2259bfcecb918d40">
         <source>Supertext translates into the languages of your shop.</source>
@@ -278,9 +330,25 @@
         <source>Testing</source>
         <target>Test</target>
       </trans-unit>
+      <trans-unit id="f4258c51d59b0c6c443bf93779bd3224">
+        <source>The API key couldn't be checked because Supertext can't be reached. The settings are saved; check again later.</source>
+        <target>Der API-Schlüssel konnte nicht geprüft werden, weil Supertext nicht erreichbar ist. Die Einstellungen sind gespeichert; prüfen Sie ihn später erneut.</target>
+      </trans-unit>
+      <trans-unit id="55fa8d0a33def195e7a866c988592de6">
+        <source>The API key couldn't be checked: Supertext answered with an error (%status%). The settings are saved; check again later.</source>
+        <target>Der API-Schlüssel konnte nicht geprüft werden: Supertext hat mit einem Fehler geantwortet (%status%). Die Einstellungen sind gespeichert; prüfen Sie ihn später erneut.</target>
+      </trans-unit>
       <trans-unit id="b623c1ef9d622af2b762727834aa6e1a">
         <source>The SUPERTEXT_API_ENDPOINT environment variable is set and is used instead.</source>
         <target>Die Umgebungsvariable SUPERTEXT_API_ENDPOINT ist gesetzt und wird stattdessen verwendet.</target>
+      </trans-unit>
+      <trans-unit id="41b4a228a6e45a5cf858819ea08dad68">
+        <source>The SUPERTEXT_VERSION_REPORTS environment variable is set and turns it off.</source>
+        <target>Die Umgebungsvariable SUPERTEXT_VERSION_REPORTS ist gesetzt und schaltet es aus.</target>
+      </trans-unit>
+      <trans-unit id="975cc236192b4e0c4c42becfdcd6e1ac">
+        <source>The SUPERTEXT_VERSION_REPORTS environment variable is set and turns it on.</source>
+        <target>Die Umgebungsvariable SUPERTEXT_VERSION_REPORTS ist gesetzt und schaltet es ein.</target>
       </trans-unit>
       <trans-unit id="23572cdc1ab2c62d5c29d89d99818dd3">
         <source>The Supertext service is currently unavailable.</source>
@@ -298,9 +366,9 @@
         <source>The document was deleted at Supertext before it could be downloaded.</source>
         <target>Das Dokument wurde bei Supertext gelöscht, bevor es heruntergeladen werden konnte.</target>
       </trans-unit>
-      <trans-unit id="ee88d6f7e5e5ee4303b40e0fa7ed8f16">
-        <source>Supertext does not support this language pair (%source% → %target%). Check the Supertext language code in the module settings.</source>
-        <target>Supertext unterstützt dieses Sprachpaar nicht (%source% → %target%). Prüfen Sie den Supertext-Sprachcode in den Moduleinstellungen.</target>
+      <trans-unit id="3ec3c4c31f73fbb69ba382d5dfdfbb30">
+        <source>The language %language% has no Supertext language yet. Ask your administrator to map it in the module settings (Languages → Supertext language).</source>
+        <target>Die Sprache %language% ist noch keiner Supertext-Sprache zugeordnet. Bitten Sie Ihre Administratorin oder Ihren Administrator, sie in den Moduleinstellungen zuzuordnen (Sprachen → Supertext-Sprache).</target>
       </trans-unit>
       <trans-unit id="4a3a68713ce55d74de42b709c5df01e8">
         <source>The requested Supertext resource was not found.</source>

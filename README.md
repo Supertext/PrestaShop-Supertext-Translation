@@ -8,7 +8,7 @@ Tick items in *Catalog → Products*, *Catalog → Categories* or *Design → Pa
 - Translates product names, summaries, descriptions, SEO fields and delivery texts; category names, descriptions and SEO fields; CMS page titles, SEO fields and content (formatting, links and lists are kept)
 - Friendly URLs follow the translated name while they are still untranslated
 - Fills only untranslated fields unless you tick *Overwrite existing translations*, with a clear warning first
-- Formal or informal tone and custom Supertext language codes per language
+- Supertext language and formal or informal tone per shop language, chosen from Supertext's own list (no guessed codes)
 - Also on the command line: `php bin/console supertext:translate product 1 2 --to=de`
 
 ![The Translate with Supertext page after translating two products into German, French and Italian](docs/images/translate-results.png)

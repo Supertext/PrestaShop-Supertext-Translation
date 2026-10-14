@@ -8,6 +8,8 @@
 
 namespace Supertext\PrestaShop\Api;
 
+use Supertext\PrestaShop\Sdk\V1\SupertextException as SdkException;
+
 /**
  * Any failure talking to Supertext. The message is safe to show to editors.
  *
@@ -47,5 +49,19 @@ final class SupertextException extends \RuntimeException
     public function detail(): string
     {
         return $this->detail;
+    }
+
+    /** The Supertext SDK's error code ("authentication_failure", …), or "" for the module's own errors. */
+    public function errorCode(): string
+    {
+        $previous = $this->getPrevious();
+
+        return $previous instanceof SdkException ? $previous->errorCode : '';
+    }
+
+    /** Supertext rejected the API key (HTTP 401/403). */
+    public function isAuthenticationFailure(): bool
+    {
+        return $this->errorCode() === SdkException::AUTHENTICATION_FAILURE;
     }
 }

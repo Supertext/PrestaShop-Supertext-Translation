@@ -60,8 +60,8 @@
             <div class="col-sm-9 st-langs pt-2">
               {% for language in targets %}
                 <label for="st-lang-{{ language.id }}">
-                  <input type="checkbox" class="st-target" id="st-lang-{{ language.id }}" value="{{ language.id }}" checked>
-                  {{ language.name }} <code>{{ language.code }}</code>{% if not language.active %} <span class="badge badge-secondary">{{ 'Inactive'|trans({}, d) }}</span>{% endif %}
+                  <input type="checkbox" class="st-target" id="st-lang-{{ language.id }}" value="{{ language.id }}"{% if language.code %} checked{% else %} disabled{% endif %}>
+                  {{ language.name }} {% if language.code %}<code>{{ language.code }}</code>{% else %}<span class="badge badge-danger st-not-mapped">{{ 'No Supertext language yet: an administrator needs to choose one in the module settings.'|trans({}, d) }}</span>{% endif %}{% if not language.active %} <span class="badge badge-secondary">{{ 'Inactive'|trans({}, d) }}</span>{% endif %}
                 </label>
               {% endfor %}
             </div>
