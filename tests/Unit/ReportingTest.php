@@ -4,6 +4,7 @@ namespace Supertext\PrestaShop\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Supertext\PrestaShop\Api\Reporting;
+use Supertext\PrestaShop\Sdk\Supertext;
 use Supertext\PrestaShop\Settings;
 
 /**
@@ -77,6 +78,7 @@ final class ReportingTest extends TestCase
         self::assertSame(['name' => 'PrestaShop-Supertext-Translation', 'version' => '1.0.0'], $report['plugin']);
         self::assertSame(['name' => 'PrestaShop', 'version' => '9.0.1'], $report['system']);
         self::assertSame('PHP', $report['runtime']['name']);
+        self::assertSame(Supertext::SDK_VERSION, $report['sdk_version']);
         self::assertTrue($report['api_key_configured']);
         self::assertSame('ok', $report['api_key_check']['status']);
         self::assertSame(['url' => 'https://shop.example.ch/index.php?fc=module&module=supertext&controller=ping'], $report['callback']);
@@ -103,6 +105,18 @@ final class ReportingTest extends TestCase
 
         self::assertSame('upgraded', $this->reporting(version: '1.1.0')->onRequest(self::KEY)?->event);
         self::assertSame('1.1.0', $this->reports()[0]['plugin']['version']);
+    }
+
+    public function testAStateStoredByTheSdkReporterIsKept(): void
+    {
+        // As the Supertext SDK 0.2 reporter stored it: switching to Plugin Health sends no new `installed`.
+        $this->state = '{"reportedVersions":"1.0.0|9.0.1|' . PHP_VERSION . '","reportedKeyStatus":"ok","lastFailureAt":null,'
+            . '"keyCheck":{"status":"ok","checkedAt":"2026-10-14T08:00:00Z","httpStatus":200,"errorCode":null,"fingerprint":"' . hash('sha256', self::KEY) . '"}}';
+        $before = $this->state;
+
+        self::assertNull($this->reporting()->onRequest(self::KEY)?->event);
+        self::assertSame([], $this->calls);
+        self::assertSame($before, $this->state, 'stored in the same format');
     }
 
     public function testRejectedTranslationIsReportedOnce(): void

@@ -26,13 +26,21 @@ define('_DB_PREFIX_', 'ps_');
 require_once $root . '/config/defines.inc.php';
 require_once $root . '/config/autoload.php';
 
-// The bundled Supertext SDK (supertext/lib/supertext-sdk) isn't in the analysed paths.
+// The bundled Supertext SDK (supertext/lib/supertext-sdk) and Plugin Health
+// (supertext/lib/supertext-plugin-health) aren't in the analysed paths.
 spl_autoload_register(static function (string $class): void {
-    $prefix = 'Supertext\\PrestaShop\\Sdk\\';
-    if (str_starts_with($class, $prefix)) {
-        $file = dirname(__DIR__, 2) . '/supertext/lib/supertext-sdk/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
-        if (is_file($file)) {
-            require $file;
+    $dirs = [
+        'Supertext\\PrestaShop\\Sdk\\' => '/supertext/lib/supertext-sdk/src/',
+        'Supertext\\PrestaShop\\PluginHealth\\' => '/supertext/lib/supertext-plugin-health/src/',
+    ];
+    foreach ($dirs as $prefix => $dir) {
+        if (str_starts_with($class, $prefix)) {
+            $file = dirname(__DIR__, 2) . $dir . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($file)) {
+                require $file;
+            }
+
+            return;
         }
     }
 });

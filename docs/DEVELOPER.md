@@ -10,6 +10,7 @@ PrestaShop module `supertext` (folder `supertext/`, PHP 8.1+, PrestaShop 8.1+ / 
 supertext/
 ├── supertext.php                         Module class: install, settings page (getContent), hooks
 ├── lib/supertext-sdk/                     bundled Supertext PHP SDK (namespace Supertext\PrestaShop\Sdk\V1; never edit)
+├── lib/supertext-plugin-health/           bundled Supertext Plugin Health (namespace Supertext\PrestaShop\PluginHealth; never edit)
 ├── controllers/front/ping.php            public ping endpoint of the Commando Center (module front controller)
 ├── config/routes.yml                     supertext_translate (page), supertext_translate_run (one item × language)
 ├── config/services.yml                   the controller and the console command
@@ -18,7 +19,8 @@ supertext/
 │   │   ├── SupertextClient.php           wrapper around the Supertext SDK: errors → translatable templates
 │   │   ├── CallableTransport.php         lets tests pass a fake HTTP callable
 │   │   ├── LanguageCodes.php             locales → Supertext codes (the SDK's Languages + the language setting; no guessing)
-│   │   ├── Reporting.php                 Commando Center: the SDK's InstallationReporter with the module's state
+│   │   ├── Reporting.php                 Commando Center: Plugin Health's InstallationReporter with the module's state
+│   │   ├── ReportTransport.php           Plugin Health's HTTP over an SDK transport (the tests' fake)
 │   │   └── SupertextException.php
 │   ├── Translation/
 │   │   ├── EntityTypes.php               what is translated: product, category, cms + their fields
@@ -92,12 +94,20 @@ AI file translation API v1, same as all Supertext plugins. Every call goes throu
 
 ### Supertext SDK
 
-The protocol, the retries, the language list, the key check, the version reports and the `data-st-id` document come from the official Supertext PHP SDK (0.2.1) ([Supertext/Supertext-API-SDK-and-Guide](https://github.com/Supertext/Supertext-API-SDK-and-Guide)). The module ships a copy in `supertext/lib/supertext-sdk/` with its namespace changed from `Supertext\Sdk` to `Supertext\PrestaShop\Sdk` (API classes in `…\Sdk\V1`, the HTTP transport in `…\Sdk\Http`; in the module's Composer class map, built by `./build.sh`), so shops install nothing extra and another module that ships the SDK itself can't clash with it. HTTP goes through the SDK's `CurlTransport` (ext-curl, which PrestaShop requires; proxy environment variables apply). `COMMIT` there names the SDK revision.
+The protocol, the retries, the language list, the API key check (`Client::checkApiKey()`, `Protocol::apiKeyFingerprint()`) and the `data-st-id` document come from the official Supertext PHP SDK (0.3.0) ([Supertext/Supertext-API-SDK-and-Guide](https://github.com/Supertext/Supertext-API-SDK-and-Guide)). The module ships a copy in `supertext/lib/supertext-sdk/` with its namespace changed from `Supertext\Sdk` to `Supertext\PrestaShop\Sdk` (API classes in `…\Sdk\V1`, the HTTP transport in `…\Sdk\Http`; in the module's Composer class map, built by `./build.sh`), so shops install nothing extra and another module that ships the SDK itself can't clash with it. HTTP goes through the SDK's `CurlTransport` (ext-curl, which PrestaShop requires; proxy environment variables apply). `COMMIT` there names the SDK revision.
 
 - Never edit `supertext/lib/supertext-sdk/`. Fix the SDK in its repository, then run `scripts/vendor-sdk.sh [ref]` (default `main`; `SDK_DIR=/path/to/clone` uses a local clone) and the tests.
 - `src/Api/SupertextClient.php` keeps the module's interface (`translateDocument`, `validateApiKey`) and turns every SDK error code into a `SupertextException` with an English template (the arms of the `$message = match` block in `fromSdk()`, which `tests/Support/ModuleStrings.php` reads; `LanguageCodes` uses `fromSdk()` too, and `errorCode()` / `isAuthenticationFailure()` give the SDK's code). A new SDK error code needs an arm there and its translation in the three edited XLF files (then `php tools/sync-translations.php`).
 - `FieldPlanner` builds and reads the document with the SDK's `HtmlDocument` and `Segment`.
-- PHPStan analyses the module's own code; `tests/phpstan/bootstrap.php` autoloads the SDK copy.
+- PHPStan analyses the module's own code; `tests/phpstan/bootstrap.php` autoloads the SDK and Plugin Health copies.
+
+### Supertext Plugin Health
+
+Version reports, the report of the API key check result and the answer of the ping endpoint come from [Supertext Plugin Health](https://github.com/Supertext/Commando-Center-Supertext-Translation/tree/main/plugin-health) 0.1.0 (`InstallationReporter`, `ReporterState`, `KeyCheck`, `PingResponse`), the plugin side of the Supertext Commando Center. It has no dependencies and doesn't need the SDK: `src/Api/Reporting.php` passes the SDK's key check in (`CallableKeyChecker` with `Client::checkApiKey()` and `Protocol::apiKeyFingerprint()`) and `Supertext::SDK_VERSION` as `sdkVersion`. The module ships a copy in `supertext/lib/supertext-plugin-health/` with its namespace changed from `Supertext\PluginHealth` to `Supertext\PrestaShop\PluginHealth` (in the module's Composer class map like the SDK copy); `VERSION` and `COMMIT` there name the release.
+
+- Never edit `supertext/lib/supertext-plugin-health/`. Fix it in Commando-Center-Supertext-Translation → `plugin-health/`, then run `scripts/vendor-plugin-health.sh <tag>` (e.g. `plugin-health-v0.1.0`; default `main`; `PLUGIN_HEALTH_DIR=/path/to/clone` uses a local clone) and the tests.
+- Its built-in transport uses ext-curl; in the tests `src/Api/ReportTransport.php` runs its reports through the same fake SDK transport as the key check.
+- Its stored state is the same JSON the SDK 0.1–0.2 reporter stored, so shops that update keep their history (no new `installed` report).
 - The live API answers an unknown language (`xx-YY`) with HTTP 404 `INVALID_LANGUAGE_PAIR`; the SDK reports it as `invalid_language_pair` with both codes, shown as "Supertext does not support this language pair (en → xx-YY)".
 
 ### Language codes
@@ -116,10 +126,10 @@ The stand-in (`tests/docs/stand-in.mjs`) accepts only Supertext's target codes a
 
 ### Commando Center: version reports, key check, ping
 
-Protocol: [Commando-Center-Supertext-Translation](https://github.com/Supertext/Commando-Center-Supertext-Translation) → `docs/DEVELOPER.md` → *Report protocol*. The SDK's `InstallationReporter` implements it; `src/Api/Reporting.php` (no PrestaShop classes) loads the state, runs one action and stores the new state, and never throws (storage errors included). `Settings::reporting()` gives it what PrestaShop knows:
+Protocol: [Commando-Center-Supertext-Translation](https://github.com/Supertext/Commando-Center-Supertext-Translation) → `docs/DEVELOPER.md` → *Report protocol*. Supertext Plugin Health's `InstallationReporter` implements it, with the SDK's `checkApiKey()` as the key check; `src/Api/Reporting.php` (no PrestaShop classes) loads the state, runs one action and stores the new state, and never throws (storage errors included). `Settings::reporting()` gives it what PrestaShop knows:
 
 - **Setting:** `SUPERTEXT_VERSION_REPORTS` (configuration, `1`/`0`; missing = on; `install()` writes `1`), checkbox on the settings page. The environment variable of the same name wins (`InstallationReporter::reportsEnabled()`); `Reporting::forcedByEnvironment()` tells the page to say so. Off: no reports, ping 404. `SUPERTEXT_REPORT_URL` sends reports elsewhere (CI, screenshots: the stand-in's `POST /report`).
-- **Report fields:** plugin `PrestaShop-Supertext-Translation` (the GitHub repository name) with the version from `supertext.php` (`Module::getInstanceByName('supertext')->version`), system `PrestaShop` with `_PS_VERSION_`, runtime PHP; `site_url` = the default shop's `domain_ssl` (with `PS_SSL_ENABLED`) or `domain` plus its base URI; `callback.url` = `<site>index.php?fc=module&module=supertext&controller=ping` (works with and without friendly URLs).
+- **Report fields:** plugin `PrestaShop-Supertext-Translation` (the GitHub repository name) with the version from `supertext.php` (`Module::getInstanceByName('supertext')->version`), system `PrestaShop` with `_PS_VERSION_`, runtime PHP, `sdk_version` = the bundled SDK's `Supertext::SDK_VERSION`; `site_url` = the default shop's `domain_ssl` (with `PS_SSL_ENABLED`) or `domain` plus its base URI; `callback.url` = `<site>index.php?fc=module&module=supertext&controller=ping` (works with and without friendly URLs).
 - **When:** `afterSettingsSaved` after every successful save of the settings form (its key check is shown as a notice); `testConnection` for *Test connection*; `onRequest` on the settings page, the *Translate with Supertext* page and every `runAction`, through `Settings::reportAfterResponse()` (a shutdown function that first calls `fastcgi_finish_request()` where available, so under PHP-FPM it runs after the response; under mod_php at the end of the request; `onRequest` only makes a request when the key changed or a report is due); `authenticationFailed` when a translation gets 401/403 (in `runAction` and in the command); `supertext:translate` runs `onRequest` itself before translating. Never on storefront pages.
 - **State:** the reporter's JSON (reported versions, last key status, last failure, the latest key check with the key's SHA-256 fingerprint; never the key) in the configuration value `SUPERTEXT_REPORTER_STATE` (global). Both values are in `Settings::ALL`, so uninstalling removes them.
 - **Ping:** `controllers/front/ping.php` (`SupertextPingModuleFrontController`) answers in `init()`, before `FrontController::init()` would start the cookie, cart, maintenance page or canonical redirects, with exactly `Reporting::ping()`'s status, headers (`Content-Type: application/json`, `Cache-Control: no-store`) and body; other methods than GET get 405.
@@ -166,7 +176,7 @@ CI (`.github/workflows/ci.yml`):
 - **phpstan**: PHPStan on the module's code with the PrestaShop 9 sources (see *Code quality and security checks*).
 - **prestashop**: installs PrestaShop 9 in Docker, installs the built zip, runs `demo/setup.php` twice (the second run must change nothing, and no password may appear in the log), translates the sample product, category and page with `supertext:translate` against the stand-in API and checks the German and French rows, slug included; a second run must skip everything. Then it checks the Commando Center: exactly one `installed` report (plugin, system, key check `ok`, callback URL; never the key) reached the stand-in's fake center, and the public ping answers the challenge with `Cache-Control: no-store` (400 for a bad challenge).
 
-Unit tests worth knowing: `LanguageCodesTest` (exact matches, no default regions, the setting wins, sources, `unsupported_language`), `ReportingTest` (the report and the stored state never contain the key, `installed` → `settings_saved`, `upgraded` only after a version change, a 401 reported once without a request to Supertext, nothing sent with reports off, storage errors swallowed, ping answers, `SUPERTEXT_VERSION_REPORTS`), `SupertextClientTest` (codes sent as given, `unsupported_feature`, a rejected key).
+Unit tests worth knowing: `LanguageCodesTest` (exact matches, no default regions, the setting wins, sources, `unsupported_language`), `ReportingTest` (the report and the stored state never contain the key, the SDK version reported, a state stored by the SDK 0.2 reporter kept without a new report, `installed` → `settings_saved`, `upgraded` only after a version change, a 401 reported once without a request to Supertext, nothing sent with reports off, storage errors swallowed, ping answers, `SUPERTEXT_VERSION_REPORTS`), `SupertextClientTest` (codes sent as given, `unsupported_feature`, a rejected key).
 
 ## Demo (Railway)
 

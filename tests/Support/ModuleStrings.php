@@ -59,7 +59,7 @@ final class ModuleStrings
         foreach ($it as $file) {
             $path = $file->getPathname();
 
-            if (str_contains($path, '/vendor/') || str_contains($path, '/translations/') || str_contains($path, '/lib/supertext-sdk/')) {
+            if (str_contains($path, '/vendor/') || str_contains($path, '/translations/') || str_contains($path, '/lib/supertext-sdk/') || str_contains($path, '/lib/supertext-plugin-health/')) {
                 continue;
             }
 

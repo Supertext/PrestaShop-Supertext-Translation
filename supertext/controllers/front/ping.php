@@ -18,7 +18,7 @@ use Supertext\PrestaShop\Settings;
  * GET index.php?fc=module&module=supertext&controller=ping&challenge=<c>
  *
  * No login, no session, no cart, no redirects: it answers before FrontController::init() runs.
- * The answer (status, headers, body) is exactly the SDK's: 200 {"ok":true,"plugin":…,"challenge":…},
+ * The answer (status, headers, body) is exactly Supertext Plugin Health's: 200 {"ok":true,"plugin":…,"challenge":…},
  * 400 for a bad challenge, 404 while version reports are off. Nothing else is returned.
  */
 class SupertextPingModuleFrontController extends ModuleFrontController

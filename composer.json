@@ -14,6 +14,7 @@
         "psr-4": {
             "Supertext\\PrestaShop\\": "supertext/src/",
             "Supertext\\PrestaShop\\Sdk\\": "supertext/lib/supertext-sdk/src/",
+            "Supertext\\PrestaShop\\PluginHealth\\": "supertext/lib/supertext-plugin-health/src/",
             "Supertext\\PrestaShop\\Tests\\": "tests/"
         }
     },

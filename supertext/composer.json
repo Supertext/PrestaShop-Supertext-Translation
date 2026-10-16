@@ -10,7 +10,8 @@
     "autoload": {
         "psr-4": {
             "Supertext\\PrestaShop\\": "src/",
-            "Supertext\\PrestaShop\\Sdk\\": "lib/supertext-sdk/src/"
+            "Supertext\\PrestaShop\\Sdk\\": "lib/supertext-sdk/src/",
+            "Supertext\\PrestaShop\\PluginHealth\\": "lib/supertext-plugin-health/src/"
         },
         "classmap": ["supertext.php"]
     },

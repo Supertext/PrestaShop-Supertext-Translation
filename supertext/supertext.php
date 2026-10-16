@@ -24,7 +24,7 @@ use PrestaShop\PrestaShop\Core\Grid\Definition\GridDefinitionInterface;
 use Supertext\PrestaShop\Api\LanguageCodes;
 use Supertext\PrestaShop\Api\Reporting;
 use Supertext\PrestaShop\Api\SupertextClient;
-use Supertext\PrestaShop\Sdk\V1\ApiKeyCheck;
+use Supertext\PrestaShop\PluginHealth\KeyCheck;
 use Supertext\PrestaShop\Settings;
 
 class Supertext extends Module
@@ -230,19 +230,19 @@ class Supertext extends Module
     }
 
     /** The key check as a notice: success, warning (Supertext unreachable or an error) or error (rejected, missing). */
-    private function displayKeyCheck(ApiKeyCheck $check): string
+    private function displayKeyCheck(KeyCheck $check): string
     {
         $message = $this->keyCheckMessage($check);
 
         return match ($check->status) {
-            ApiKeyCheck::OK                         => $this->displayConfirmation($message),
-            ApiKeyCheck::INVALID, ApiKeyCheck::MISSING => $this->displayError($message),
+            KeyCheck::OK                         => $this->displayConfirmation($message),
+            KeyCheck::INVALID, KeyCheck::MISSING => $this->displayError($message),
             default                                 => $this->displayWarning($message),
         };
     }
 
     /** The Commando Center's key-check messages, with the account and API key links for "invalid" and "missing" (HTML). */
-    private function keyCheckMessage(ApiKeyCheck $check): string
+    private function keyCheckMessage(KeyCheck $check): string
     {
         $links = [
             '%signup%' => '<a href="' . Settings::SIGNUP_URL . '" target="_blank" rel="noopener">supertext.com</a>',
@@ -251,10 +251,10 @@ class Supertext extends Module
         $status = htmlspecialchars((string) ($check->httpStatus ?? $check->errorCode ?? '?'), ENT_QUOTES, 'UTF-8');
 
         return match ($check->status) {
-            ApiKeyCheck::OK          => $this->trans('API key checked: the connection to Supertext works.', [], 'Modules.Supertext.Admin'),
-            ApiKeyCheck::INVALID     => $this->trans('Supertext rejected the API key. Check that you copied the whole key, or generate a new one at %apikey% (requires the Admin role). No Supertext account yet? Create one at %signup%.', $links, 'Modules.Supertext.Admin'),
-            ApiKeyCheck::MISSING     => $this->trans('No API key is set yet. No Supertext account yet? Create one at %signup%. Generate your API key at %apikey% (requires the Admin role).', $links, 'Modules.Supertext.Admin'),
-            ApiKeyCheck::UNREACHABLE => $this->trans('The API key couldn\'t be checked because Supertext can\'t be reached. The settings are saved; check again later.', [], 'Modules.Supertext.Admin'),
+            KeyCheck::OK          => $this->trans('API key checked: the connection to Supertext works.', [], 'Modules.Supertext.Admin'),
+            KeyCheck::INVALID     => $this->trans('Supertext rejected the API key. Check that you copied the whole key, or generate a new one at %apikey% (requires the Admin role). No Supertext account yet? Create one at %signup%.', $links, 'Modules.Supertext.Admin'),
+            KeyCheck::MISSING     => $this->trans('No API key is set yet. No Supertext account yet? Create one at %signup%. Generate your API key at %apikey% (requires the Admin role).', $links, 'Modules.Supertext.Admin'),
+            KeyCheck::UNREACHABLE => $this->trans('The API key couldn\'t be checked because Supertext can\'t be reached. The settings are saved; check again later.', [], 'Modules.Supertext.Admin'),
             default                  => $this->trans('The API key couldn\'t be checked: Supertext answered with an error (%status%). The settings are saved; check again later.', ['%status%' => $status], 'Modules.Supertext.Admin'),
         };
     }
