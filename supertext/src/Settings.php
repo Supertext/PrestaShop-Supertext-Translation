@@ -82,7 +82,12 @@ final class Settings
         return $value >= 30 ? $value : 180;
     }
 
-    /** @return array<int, array{code: string, tone: string}> id_lang => per-language settings */
+    /**
+     * The per-language settings. Codes saved by an earlier version are read as codes of Supertext's
+     * list ("de" → "de-DE", "de-ch" → "de-CH", see LanguageCodes::migrate()).
+     *
+     * @return array<int, array{code: string, tone: string}> id_lang => per-language settings
+     */
     public static function languages(): array
     {
         $data = json_decode((string) \Configuration::getGlobalValue(self::LANGUAGES), true);
@@ -90,7 +95,7 @@ final class Settings
 
         foreach (\is_array($data) ? $data : [] as $idLang => $row) {
             $out[(int) $idLang] = [
-                'code' => trim((string) ($row['code'] ?? '')),
+                'code' => LanguageCodes::migrate((string) ($row['code'] ?? '')),
                 'tone' => \in_array($row['tone'] ?? '', self::TONES, true) ? $row['tone'] : 'default',
             ];
         }
@@ -104,18 +109,29 @@ final class Settings
         \Configuration::updateGlobalValue(self::LANGUAGES, json_encode($languages, JSON_UNESCAPED_SLASHES));
     }
 
+    /** Stores the migrated codes (languages()) when they differ from what is saved; run on upgrade and on the settings page. */
+    public static function migrateLanguages(): void
+    {
+        $stored = json_decode((string) \Configuration::getGlobalValue(self::LANGUAGES), true);
+
+        if (\is_array($stored) && $stored !== [] && $stored !== self::languages()) {
+            self::saveLanguages(self::languages());
+        }
+    }
+
     /**
      * The code sent to Supertext as target language: the language's Supertext language (setting),
-     * else its locale when that is a Supertext code apart from case and "_"/"-". Never guessed.
+     * else its locale when that is a Supertext code apart from case and "_"/"-", else the SDK's
+     * default for the locale ("de" → "de-DE", "es-ES" → "es").
      *
-     * @throws SupertextException unsupported_language: the language needs a Supertext language
+     * @throws SupertextException unsupported_language: the language has neither (e.g. "en-IE")
      */
     public static function targetCode(\Language $language): string
     {
         return LanguageCodes::target(self::localeOf($language), self::override((int) $language->id));
     }
 
-    /** The target code, or null when the language has no Supertext language yet. */
+    /** The target code, or null when the language has no Supertext language and no default. */
     public static function targetCodeOrNull(\Language $language): ?string
     {
         return LanguageCodes::targetOrNull(self::localeOf($language), self::override((int) $language->id));

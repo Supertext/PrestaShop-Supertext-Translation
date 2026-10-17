@@ -72,14 +72,27 @@ Each shop language needs a **Supertext language**. Supertext accepts exactly the
 | Swiss German | `gsw-u-sd-chzh` (Zurich), `gsw-u-sd-chbe` (Bern) |
 | All others, without region | `bg`, `cs`, `da`, `el`, `es`, `fi`, `hr`, `hu`, `ja`, `ko`, `nb`, `nl`, `pl`, `rm`, `ru`, `sk`, `sl`, `sq`, `sv`, `tr` |
 
-In the module settings' **Languages** panel, choose per shop language:
+In the module settings (*Modules → Module Manager → Supertext Translation → Configure*), the **Languages** panel has one row per shop language (all of them, including the default language, because the same choice is used when a language is the source) with:
 
-- the **Supertext language** from Supertext's list. A language whose **locale** already is one of these codes (apart from upper/lower case and `_`/`-`: `de-CH`, `fr-CH`, `es`) is preselected. Every other locale needs a choice: PrestaShop's `de`, `es-ES`, `nl-NL` or `zh-CN` aren't Supertext codes, and the module **never guesses** a region (whether `de` means Germany or Switzerland is your decision). A language without a Supertext language is marked *Not mapped*, can't be ticked on the *Translate with Supertext* page and nothing is sent for it. The same choice is used when the language is the source: only its language is sent (`de-CH` → `de`, `en-US` → `en`).
-- the **tone**: *Formal (Sie, vous)*, *Informal (du, tu)* or *Supertext default*. Supertext offers no formal/informal choice for English, Swiss German, Romansh, Albanian and Serbian; the panel warns when one of those is set to formal or informal, and translating would fail with *Supertext offers no formal or informal tone for this language*, so set them to *Supertext default*.
+- the **Supertext language**: a list of Supertext's codes, shown as name and code (*Deutsch (Schweiz) (de-CH)*, names in your back-office language). A language that has none saved yet gets a suggestion preselected:
+  - its **locale** when that already is one of these codes (apart from upper/lower case and `_`/`-`: `de-CH`, `fr-CH`, `es`);
+  - otherwise the usual code where one is obvious (the Supertext SDK's defaults, the same in every Supertext plugin):
 
-A code you saved before that isn't in the list (for example one Supertext added later) stays selected and is sent as it is.
+    | Shop locale | Suggested Supertext language |
+    | --- | --- |
+    | `de`, `en`, `fr`, `it`, `pt` | `de-DE`, `en-US`, `fr-FR`, `it-IT`, `pt-PT` |
+    | `zh`, `zh-CN`, `zh-SG` / `zh-TW`, `zh-HK`, `zh-MO` | `zh-Hans` / `zh-Hant` |
+    | `sr`, `sr-Latn-RS` | `sr-Latn` |
+    | A region of a language Supertext offers without region (`es-ES`, `es-MX`, `nl-NL`, `sl-SI`, `nb-NO`) | the bare code (`es`, `nl`, `sl`, `nb`) |
 
-<img src="images/module-languages.png" alt="Languages panel of the module settings: English, Deutsch (Schweiz), Français (Suisse) and Italiano (Svizzera) with their locales, an empty Supertext language code field each and the tone; German is set to Formal (Sie, vous)" width="720">
+  - nothing else is guessed: `en-IE`, `de-LI`, `fr-BE`, `sr-RS`, `gsw` or `no` show *— choose —* and the hint *No suggestion for this language*. Such a language can't be ticked on the *Translate with Supertext* page and nothing is sent for it until you choose its Supertext language.
+
+  **Save** to store the choices. A language you never saved uses its suggestion anyway, so a shop with `de-CH`, `fr-CH` and `de` translates without any setup; save once to fix the choice (for example `de` as `de-CH` instead of `de-DE`). When the language is the source, only its language is sent (`de-CH` → `de`, `en-US` → `en`). Saving accepts only codes from the list.
+- the **tone**: *Formal (Sie, vous)*, *Informal (du, tu)* or *Supertext default*. It is only shown when the chosen Supertext language offers it; English, Swiss German, Romansh, Albanian and Serbian have none (the panel says *Supertext offers no formal/informal choice for this language*, and a tone saved earlier for them isn't sent).
+
+**Upgrading from 0.1.0**, where the Supertext language was a free-text field: saved codes are read as codes of the list (`de-ch` → `de-CH`, `de` → `de-DE`, which is what 0.1.0 sent, `es-ES` → `es`) and stored that way the next time the settings page is opened. A saved code the list doesn't know (for example one Supertext added later) stays selected and is sent as it is.
+
+<img src="images/module-languages.png" alt="Languages panel of the module settings: English, Deutsch (Schweiz), Français (Suisse) and Italiano (Svizzera) with their locales, their Supertext language and the tone; German is set to Formal (Sie, vous)" width="720">
 
 ## 4. Check it works
 
@@ -110,7 +123,7 @@ The module's screens (settings page, *Translate with Supertext* page, list actio
 | Custom API base URL | – | Overrides the environment (e.g. a test server). The `SUPERTEXT_API_ENDPOINT` environment variable wins. |
 | Timeout | 180 s | Maximum wait for one translation (30–1800 s) |
 | Send version information to Supertext | On | Sends the site URL and the versions of this module, PrestaShop and PHP to Supertext when you save the settings and after an update (see [below](#version-information-and-the-api-key-check)). The `SUPERTEXT_VERSION_REPORTS` environment variable wins (`0`, `false`, `off`, `no` or `1`, `true`, `on`, `yes`). |
-| Languages | – | Per shop language: its Supertext language (preselected when the locale is a Supertext code; otherwise required, see [Supertext language and tone](#supertext-language-and-tone)) and tone |
+| Languages | suggested per locale | Per shop language: its Supertext language (a list; the suggestion is preselected and used until you save another one, see [Supertext language and tone](#supertext-language-and-tone)) and tone (only where Supertext offers one) |
 
 Settings are global (the same for all shops of a multistore installation).
 
@@ -157,9 +170,9 @@ Upload the new zip in *Modules → Module Manager → Upload a module* (or repla
 | *The API key couldn't be checked: Supertext answered with an error (…)* | Usually temporary; run **Test connection** again later. If it stays, contact Supertext with the code shown. |
 | *You are not allowed to edit this item* | The employee's profile lacks *Edit* permission (see *Who can translate*). |
 | *The translation could not be saved: …* | PrestaShop rejected a translated value (e.g. a field it validates strictly). The message names the field; translate it by hand or report it to Supertext. |
-| *The language … has no Supertext language yet* / *Not mapped* in the Languages panel | The language's locale isn't a Supertext code (e.g. `de`, `es-ES`). Choose its Supertext language in the module settings (see [Supertext language and tone](#supertext-language-and-tone)). |
+| *The language … has no Supertext language* / *No suggestion for this language* in the Languages panel | The language's locale is neither a Supertext code nor one with an obvious default (e.g. `en-IE`, `de-LI`, `gsw`). Choose its Supertext language in *Configure → Languages* (see [Supertext language and tone](#supertext-language-and-tone)). |
 | *Supertext does not support this language pair (en → xx-YY)* | A saved Supertext language that Supertext doesn't offer, or the same language as the source. Choose another one from the list; the message shows the codes that were sent. |
-| *Supertext offers no formal or informal tone for this language* | The language's tone is *Formal* or *Informal*, but Supertext doesn't offer that for it (English, Swiss German, Romansh, Albanian, Serbian). Set it to *Supertext default*. |
+| *Supertext offers no formal or informal tone for this language* | The language's tone is *Formal* or *Informal*, but Supertext doesn't offer that for its Supertext language. The module only sends a tone where Supertext's list offers one, so this only happens with a code that isn't in the list; set the tone to *Supertext default*. |
 | *Too many requests to Supertext* | Supertext's per-second limit was still exceeded after 4 automatic retries. Wait a moment and translate again. |
 | *Your Supertext translation limit is exceeded* | Your Supertext plan's volume is used up. |
 | *Timed out waiting* | Very long descriptions: raise the *Timeout* (and PHP's `max_execution_time`). |

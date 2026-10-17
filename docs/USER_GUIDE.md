@@ -74,9 +74,9 @@ The table shows the reason for each item and language that fails; the other ones
 | *Supertext is not set up yet* | An administrator needs to enter the API key in the module settings. |
 | *You are not allowed to edit this item* | Your profile can't edit this kind of item; ask an administrator. |
 | *Authentication failed* | The API key is no longer valid; tell your administrator. |
-| *The language … has no Supertext language yet* | Your administrator hasn't chosen the Supertext language for it in the module settings. Ask them to; the other languages are translated. On the *Translate with Supertext* page such a language can't be ticked and says *No Supertext language yet*. |
+| *The language … has no Supertext language* | The language has no obvious Supertext code (e.g. `en-IE`, `de-LI`) and your administrator hasn't chosen one in the module settings (*Configure → Languages*). Ask them to; the other languages are translated. On the *Translate with Supertext* page such a language can't be ticked and says *No Supertext language yet*. |
 | *Supertext does not support this language pair (en → …)* | Supertext can't translate into this language, or its Supertext language in the module settings is wrong. Tell your administrator. |
-| *Supertext offers no formal or informal tone for this language* | The tone set for this language isn't available at Supertext. Ask your administrator to set it to *Supertext default*. |
+| *Supertext offers no formal or informal tone for this language* | The tone set for this language isn't available at Supertext (only with a code the module's list doesn't know). Ask your administrator to set it to *Supertext default*. |
 | *Too many requests to Supertext* | Wait a moment and click **Translate** again. Items already done show *Already translated, unchanged*. |
 | *Your Supertext translation limit is exceeded* | Your Supertext plan's volume is used up; tell your administrator. |
 | *The translation could not be saved: …* | PrestaShop rejected a translated value. Translate that field by hand. |

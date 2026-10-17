@@ -101,7 +101,7 @@
     <div class="panel-heading"><i class="icon-flag"></i> {l s='Languages' d='Modules.Supertext.Admin'}</div>
     <p>
       {l s='Supertext translates into the languages of your shop.' d='Modules.Supertext.Admin'}
-      {l s='Choose the Supertext language for each shop language. A locale that is a Supertext language (e.g. de-CH, es) is preselected; other locales (e.g. de, es-ES) need a choice, otherwise that language isn\'t translated.' d='Modules.Supertext.Admin'}
+      {l s='Choose the Supertext language for each shop language. The suggested one is preselected: the same code (e.g. de-CH, es), else the usual one (de → de-DE, es-ES → es, zh-CN → zh-Hans). Languages without a suggestion (e.g. en-IE, de-LI) need a choice, otherwise they aren\'t translated. Save to keep the choices.' d='Modules.Supertext.Admin'}
       <a href="{$st.languagesUrl|escape:'html':'UTF-8'}">{l s='Manage languages' d='Modules.Supertext.Admin'}</a>
     </p>
     <table class="table">
@@ -124,32 +124,45 @@
             <td><code>{$language.locale|escape:'html':'UTF-8'}</code></td>
             <td>
               <select name="languages[{$language.id|intval}][code]" class="form-control st-language" style="max-width:20em">
-                <option value=""{if $language.code == ''} selected{/if}>— {l s='Not mapped' d='Modules.Supertext.Admin'} —</option>
+                {if $language.choose}
+                  <option value="" selected>— {l s='choose' d='Modules.Supertext.Admin'} —</option>
+                {/if}
                 {if $language.custom}
-                  <option value="{$language.code|escape:'html':'UTF-8'}" selected>{$language.code|escape:'html':'UTF-8'}</option>
+                  <option value="{$language.code|escape:'html':'UTF-8'}" data-politeness="1" selected>{$language.code|escape:'html':'UTF-8'}</option>
                 {/if}
                 {foreach $st.targets as $target}
-                  <option value="{$target.code|escape:'html':'UTF-8'}"{if $language.code == $target.code} selected{/if}>{$target.name|escape:'html':'UTF-8'} ({$target.code|escape:'html':'UTF-8'})</option>
+                  <option value="{$target.code|escape:'html':'UTF-8'}" data-politeness="{if $target.politeness}1{else}0{/if}"{if $language.code == $target.code} selected{/if}>{$target.name|escape:'html':'UTF-8'} ({$target.code|escape:'html':'UTF-8'})</option>
                 {/foreach}
               </select>
               {if !$language.target}
-                <p class="help-block text-danger st-not-mapped">{l s='Not mapped: choose a Supertext language, or this language isn\'t translated.' d='Modules.Supertext.Admin'}</p>
+                <p class="help-block text-danger st-not-mapped">{l s='No suggestion for this language: choose a Supertext language, otherwise it isn\'t translated.' d='Modules.Supertext.Admin'}</p>
               {/if}
             </td>
             <td>
-              <select name="languages[{$language.id|intval}][tone]" class="form-control" style="max-width:16em">
+              <select name="languages[{$language.id|intval}][tone]" class="form-control st-tone" style="max-width:16em{if !$language.politeness};display:none{/if}">
                 <option value="default"{if $language.tone == 'default'} selected{/if}>{l s='Supertext default' d='Modules.Supertext.Admin'}</option>
                 <option value="more"{if $language.tone == 'more'} selected{/if}>{l s='Formal (Sie, vous)' d='Modules.Supertext.Admin'}</option>
                 <option value="less"{if $language.tone == 'less'} selected{/if}>{l s='Informal (du, tu)' d='Modules.Supertext.Admin'}</option>
               </select>
-              {if $language.toneUnsupported}
-                <p class="help-block text-warning st-no-politeness">{l s='Supertext offers no formal/informal choice for this language: choose "Supertext default".' d='Modules.Supertext.Admin'}</p>
-              {/if}
+              <p class="help-block st-tone-none"{if $language.politeness} style="display:none"{/if}>{l s='Supertext offers no formal/informal choice for this language.' d='Modules.Supertext.Admin'}</p>
             </td>
           </tr>
         {/foreach}
       </tbody>
     </table>
+    <script>
+      document.querySelectorAll('#supertext-languages select.st-language').forEach(function (select) {
+        select.addEventListener('change', function () {
+          var row = select.closest('tr');
+          var option = select.options[select.selectedIndex];
+          var polite = !option || option.value === '' || option.getAttribute('data-politeness') === '1';
+          row.querySelector('select.st-tone').style.display = polite ? '' : 'none';
+          row.querySelector('.st-tone-none').style.display = polite ? 'none' : '';
+          var notMapped = row.querySelector('.st-not-mapped');
+          if (notMapped) { notMapped.style.display = option && option.value !== '' ? 'none' : ''; }
+        });
+      });
+    </script>
     <div class="panel-footer">
       <button type="submit" name="submitSupertextSettings" value="1" class="btn btn-default pull-right"><i class="process-icon-save"></i> {l s='Save' d='Modules.Supertext.Admin'}</button>
     </div>

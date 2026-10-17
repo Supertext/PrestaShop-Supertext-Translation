@@ -2,9 +2,9 @@
 <xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
   <file original="modules/supertext" source-language="en-US" target-language="fr-CH" datatype="plaintext">
     <body>
-      <trans-unit id="8343ca5708115389a1b9e5c69969f5b2">
-        <source>"%code%" is not a valid language code. Use a code such as de-CH or fr.</source>
-        <target>« %code% » n’est pas un code de langue valide. Utilisez un code comme de-CH ou fr.</target>
+      <trans-unit id="0523bf7f5b870f556f4b7486d57ca55f">
+        <source>"%code%" is not a Supertext language. Choose one from the list.</source>
+        <target>« %code% » n’est pas une langue Supertext. Choisissez-en une dans la liste.</target>
       </trans-unit>
       <trans-unit id="9f3e73f7789915d01e02679c1826dce5">
         <source>%count% kept</source>
@@ -62,9 +62,9 @@
         <source>Choose at least one language to translate into.</source>
         <target>Choisissez au moins une langue de traduction.</target>
       </trans-unit>
-      <trans-unit id="1dd1623a2915cf9b29cc98cc39d11b63">
-        <source>Choose the Supertext language for each shop language. A locale that is a Supertext language (e.g. de-CH, es) is preselected; other locales (e.g. de, es-ES) need a choice, otherwise that language isn't translated.</source>
-        <target>Choisissez la langue Supertext de chaque langue de la boutique. Une locale qui est une langue Supertext (p. ex. de-CH, es) est présélectionnée ; les autres locales (p. ex. de, es-ES) doivent être choisies, sinon cette langue n’est pas traduite.</target>
+      <trans-unit id="7a595845db69d4a154abe1434e737570">
+        <source>Choose the Supertext language for each shop language. The suggested one is preselected: the same code (e.g. de-CH, es), else the usual one (de → de-DE, es-ES → es, zh-CN → zh-Hans). Languages without a suggestion (e.g. en-IE, de-LI) need a choice, otherwise they aren't translated. Save to keep the choices.</source>
+        <target>Choisissez la langue Supertext de chaque langue de la boutique. La langue suggérée est présélectionnée : le même code (p. ex. de-CH, es), sinon le code habituel (de → de-DE, es-ES → es, zh-CN → zh-Hans). Les langues sans suggestion (p. ex. en-IE, de-LI) demandent un choix, sinon elles ne sont pas traduites. Enregistrez pour conserver les choix.</target>
       </trans-unit>
       <trans-unit id="f2ddf2d5009d9038a211ae1863b58a9d">
         <source>Could not reach Supertext: %error%</source>
@@ -174,17 +174,13 @@
         <source>No Supertext language yet: an administrator needs to choose one in the module settings.</source>
         <target>Pas encore de langue Supertext : un administrateur doit la choisir dans les paramètres du module.</target>
       </trans-unit>
+      <trans-unit id="f7e28b70a0cff6b9ddf2d27c346108b1">
+        <source>No suggestion for this language: choose a Supertext language, otherwise it isn't translated.</source>
+        <target>Aucune suggestion pour cette langue : choisissez une langue Supertext, sinon elle n’est pas traduite.</target>
+      </trans-unit>
       <trans-unit id="e60304f10775d8e6769660f6e20e7744">
         <source>Not checked yet. It is checked when you save these settings or test the connection.</source>
         <target>Pas encore vérifiée. La clé est vérifiée lorsque vous enregistrez ces paramètres ou testez la connexion.</target>
-      </trans-unit>
-      <trans-unit id="7f7d2ea8e94639ce639ba271c1a3196e">
-        <source>Not mapped</source>
-        <target>Non associée</target>
-      </trans-unit>
-      <trans-unit id="20028685df3eebd14f6908235b9852f0">
-        <source>Not mapped: choose a Supertext language, or this language isn't translated.</source>
-        <target>Non associée : choisissez une langue Supertext, sinon cette langue n’est pas traduite.</target>
       </trans-unit>
       <trans-unit id="908c0345c3cc55c54abc25a083f7ce50">
         <source>Not translated</source>
@@ -310,9 +306,9 @@
         <source>Supertext offers no formal or informal tone for this language. Set its tone to "Supertext default" in the module settings.</source>
         <target>Supertext ne propose pas de ton formel ou informel pour cette langue. Réglez son ton sur « Par défaut de Supertext » dans les paramètres du module.</target>
       </trans-unit>
-      <trans-unit id="cf289abb6f6ff214cb610dac3f82a477">
-        <source>Supertext offers no formal/informal choice for this language: choose "Supertext default".</source>
-        <target>Supertext ne propose pas de choix formel/informel pour cette langue : choisissez « Par défaut de Supertext ».</target>
+      <trans-unit id="dac9c5baa0bd8de5a5a2166920ef23ea">
+        <source>Supertext offers no formal/informal choice for this language.</source>
+        <target>Supertext ne propose pas de vouvoiement ou de tutoiement pour cette langue.</target>
       </trans-unit>
       <trans-unit id="e75713efc45ecee5263a2ac9b80ef578">
         <source>Supertext rejected the API key. Check that you copied the whole key, or generate a new one at %apikey% (requires the Admin role). No Supertext account yet? Create one at %signup%.</source>
@@ -366,9 +362,9 @@
         <source>The document was deleted at Supertext before it could be downloaded.</source>
         <target>Le document a été supprimé chez Supertext avant de pouvoir être téléchargé.</target>
       </trans-unit>
-      <trans-unit id="3ec3c4c31f73fbb69ba382d5dfdfbb30">
-        <source>The language %language% has no Supertext language yet. Ask your administrator to map it in the module settings (Languages → Supertext language).</source>
-        <target>La langue %language% n’est encore associée à aucune langue Supertext. Demandez à votre administrateur de l’associer dans les paramètres du module (Langues → Langue Supertext).</target>
+      <trans-unit id="bab7b7aab3a26e8113609e4670504d9a">
+        <source>The language %language% has no Supertext language. Ask your administrator to choose one in Modules → Module Manager → Supertext Translation → Configure → Languages (list Supertext language).</source>
+        <target>La langue %language% n’est associée à aucune langue Supertext. Demandez à votre administrateur d’en choisir une dans Modules → Gestionnaire de modules → Supertext Translation → Configurer → Langues (liste « Langue Supertext »).</target>
       </trans-unit>
       <trans-unit id="4a3a68713ce55d74de42b709c5df01e8">
         <source>The requested Supertext resource was not found.</source>
@@ -465,6 +461,10 @@
       <trans-unit id="aadb1500ad1bd7e877e396d13135ac56">
         <source>Your Supertext translation limit is exceeded. Please upgrade your subscription.</source>
         <target>Votre limite de traduction Supertext est dépassée. Veuillez passer à un abonnement supérieur.</target>
+      </trans-unit>
+      <trans-unit id="ebd73ade48cb3e102d1dbbfbc0377c5f">
+        <source>choose</source>
+        <target>choisir</target>
       </trans-unit>
     </body>
   </file>

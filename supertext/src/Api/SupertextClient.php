@@ -148,7 +148,7 @@ final class SupertextClient
             $code === SdkException::MISSING_API_KEY        => 'No Supertext API key is configured. No Supertext account yet? Create one at https://www.supertext.com/person/en/account/signin. Generate your API key at https://www.supertext.com/en/integrations/api (requires the Admin role).',
             $code === SdkException::AUTHENTICATION_FAILURE => 'Authentication failed. Please check the Supertext API key. A new key can be generated at https://www.supertext.com/en/integrations/api (requires the Admin role). No Supertext account yet? Create one at https://www.supertext.com/person/en/account/signin.',
             $code === SdkException::INVALID_LANGUAGE_PAIR  => 'Supertext does not support this language pair (%source% → %target%). Check the Supertext language in the module settings.',
-            $code === SdkException::UNSUPPORTED_LANGUAGE   => 'The language %language% has no Supertext language yet. Ask your administrator to map it in the module settings (Languages → Supertext language).',
+            $code === SdkException::UNSUPPORTED_LANGUAGE   => 'The language %language% has no Supertext language. Ask your administrator to choose one in Modules → Module Manager → Supertext Translation → Configure → Languages (list Supertext language).',
             $code === SdkException::UNSUPPORTED_FEATURE    => 'Supertext offers no formal or informal tone for this language. Set its tone to "Supertext default" in the module settings.',
             $code === SdkException::NOT_FOUND              => 'The requested Supertext resource was not found.',
             $code === SdkException::PAYLOAD_TOO_LARGE      => 'The content is too large for Supertext to translate in one go.',

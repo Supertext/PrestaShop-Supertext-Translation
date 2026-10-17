@@ -8,6 +8,7 @@
 
 namespace Supertext\PrestaShop\Translation;
 
+use Supertext\PrestaShop\Api\LanguageCodes;
 use Supertext\PrestaShop\Api\SupertextClient;
 use Supertext\PrestaShop\Api\SupertextException;
 use Supertext\PrestaShop\Settings;
@@ -61,11 +62,14 @@ final class EntityTranslator
             return ['status' => 'unchanged', 'title' => $title, 'translated' => [], 'kept' => $planner->kept()];
         }
 
+        $targetCode = Settings::targetCode($target);
+
         $translatedHtml = $this->client->translateDocument(
             $planner->document(),
-            Settings::targetCode($target),
+            $targetCode,
             Settings::sourceCode($source),
-            Settings::tone($targetId),
+            // A tone saved for a language whose Supertext language offers none (e.g. en-US) isn't sent.
+            LanguageCodes::supportsPoliteness($targetCode) === false ? 'default' : Settings::tone($targetId),
         );
 
         $values = $planner->apply($translatedHtml);

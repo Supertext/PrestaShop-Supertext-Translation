@@ -124,26 +124,32 @@ class Supertext extends Module
             Settings::reportAfterResponse();
         }
 
+        Settings::migrateLanguages();
+
         $languages = [];
         $saved     = Settings::languages();
 
         foreach (Language::getLanguages(false) as $language) {
-            $id       = (int) $language['id_lang'];
-            $locale   = Settings::localeOf(new Language($id));
-            $code     = $saved[$id]['code'] ?? '';
-            $tone     = $saved[$id]['tone'] ?? 'default';
-            $target   = LanguageCodes::targetOrNull($locale, $code);
-            $selected = $code !== '' ? $code : (string) LanguageCodes::match($locale);
+            $id         = (int) $language['id_lang'];
+            $locale     = Settings::localeOf(new Language($id));
+            $code       = $saved[$id]['code'] ?? '';
+            $tone       = $saved[$id]['tone'] ?? 'default';
+            $suggestion = LanguageCodes::suggest($locale);
+            $selected   = $code !== '' ? $code : (string) $suggestion;
+            $target     = LanguageCodes::targetOrNull($locale, $code);
+            $politeness = $target !== null ? LanguageCodes::supportsPoliteness($target) : null;
 
             $languages[] = [
                 'id'                => $id,
                 'name'              => $language['name'],
                 'locale'            => $locale,
                 'code'              => $selected,
-                'custom'            => $selected !== '' && !in_array($selected, array_column(LanguageCodes::targets(), 'code'), true),
+                'choose'            => $selected === '',
+                'custom'            => $selected !== '' && !LanguageCodes::isTarget($selected),
                 'target'            => $target,
                 'tone'              => $tone,
-                'toneUnsupported'   => $tone !== 'default' && $target !== null && LanguageCodes::supportsPoliteness($target) === false,
+                // Formal/informal only where the chosen target offers it (unknown codes: shown, Supertext decides).
+                'politeness'        => $politeness !== false,
                 'isDefault'         => $id === (int) Configuration::get('PS_LANG_DEFAULT'),
                 'active'            => (bool) $language['active'],
             ];
@@ -171,7 +177,7 @@ class Supertext extends Module
                 'versionReportsEnabled' => Settings::versionReportsEnabled(),
                 'versionReportsFromEnv' => Reporting::forcedByEnvironment(),
                 'languages'      => $languages,
-                'targets'        => LanguageCodes::targets(),
+                'targets'        => LanguageCodes::options((string) ($this->context->language->locale ?? 'en')),
                 'languagesUrl'   => $this->context->link->getAdminLink('AdminLanguages'),
                 'signupUrl'      => Settings::SIGNUP_URL,
                 'apiKeyUrl'      => Settings::API_KEY_URL,
@@ -210,13 +216,19 @@ class Supertext extends Module
         Configuration::updateGlobalValue(Settings::VERSION_REPORTS, Tools::getValue('version_reports') ? 1 : 0);
 
         $languages = [];
+        $saved     = Settings::languages();
 
         foreach ((array) Tools::getValue('languages', []) as $id => $row) {
             $code = trim((string) ($row['code'] ?? ''));
             $tone = (string) ($row['tone'] ?? 'default');
 
-            if ($code !== '' && !preg_match('/^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$/', $code)) {
-                return [$this->displayError($this->trans('"%code%" is not a valid language code. Use a code such as de-CH or fr.', ['%code%' => $code], 'Modules.Supertext.Admin')), false];
+            // Only Supertext's codes (the list), or the code already saved (one an earlier version accepted).
+            if ($code !== '' && !LanguageCodes::isTarget($code) && $code !== ($saved[(int) $id]['code'] ?? '')) {
+                return [$this->displayError($this->trans('"%code%" is not a Supertext language. Choose one from the list.', ['%code%' => $code], 'Modules.Supertext.Admin')), false];
+            }
+
+            if ($code !== '' && LanguageCodes::supportsPoliteness($code) === false) {
+                $tone = 'default';
             }
 
             if ($code !== '' || $tone !== 'default') {
