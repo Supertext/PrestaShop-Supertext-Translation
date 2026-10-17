@@ -83,6 +83,7 @@ Lessons from the live API, apply them here: header `Authorization: Supertext-Aut
 ## This repo
 
 - Before committing: `composer test`, PHP lint, PHPStan (`docs/DEVELOPER.md` → *Code quality and security checks*), `./build.sh`. CI also installs PrestaShop 9 in Docker and translates the demo content against the stand-in.
+- End-to-end tests against the real Supertext API: `.github/workflows/e2e.yml` with `tests/e2e/` (see "End-to-end tests" in `docs/DEVELOPER.md`). The key is only the GitHub secret `SUPERTEXT_API_KEY`, set by Remy; sessions don't use a live key. Behaviour changes need matching checks in `tests/e2e/live.mjs`.
 - Test UI changes in a local PrestaShop with the module mounted (see `docs/DEVELOPER.md` → Local development) and regenerate the screenshots they affect (`tests/docs/screenshots.mjs`).
 - New settings go in `supertext/src/Settings.php`, `views/templates/admin/configure.tpl` **and** the settings table in `docs/INSTALLATION.md`.
 - Translated fields live in `supertext/src/Translation/EntityTypes.php`; keep "What is translated" in `docs/DEVELOPER.md` and `docs/USER_GUIDE.md` in sync.
