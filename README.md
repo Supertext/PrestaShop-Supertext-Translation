@@ -14,6 +14,17 @@ Tick items in *Catalog → Products*, *Catalog → Categories* or *Design → Pa
 
 ![The Translate with Supertext page after translating two products into German, French and Italian](docs/images/translate-results.png)
 
+## Export for translation and import (XLIFF and HTML)
+
+Besides translating with Supertext AI, you can export a product, category or CMS page as a file, have it translated elsewhere and import the result.
+
+- **Where:** the two boxes on the *Translate with Supertext* page, below the item table.
+- **Formats:** XLIFF 1.2 for translation tools such as Trados, memoQ or Phrase (formatting travels as protected tags; several target languages in one file), or HTML (one language per file) for translators or Supertext's web app, which keeps the file's head and `data-st-id` attributes, so the translated file imports as it is.
+- **Import:** the file says what it was exported from and for which language. The translations are written with the same rules as a Supertext AI translation, and a summary shows what was imported and what was skipped: source changed since the export (import those anyway with *Also import texts whose source changed since the export*), not translated, formatting changed, not in the file.
+- **Safe:** files over 10 MB, files from another system and translations that add markup the source doesn't have are refused; uploaded files aren't stored.
+
+Details: [user guide](docs/USER_GUIDE.md#export-for-translation-and-import-translated-files).
+
 ## Documentation
 
 | Guide | For |
