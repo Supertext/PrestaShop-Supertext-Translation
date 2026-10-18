@@ -12,7 +12,8 @@ supertext/
 ├── lib/supertext-sdk/                     bundled Supertext PHP SDK (namespace Supertext\PrestaShop\Sdk\V1; never edit)
 ├── lib/supertext-plugin-health/           bundled Supertext Plugin Health (namespace Supertext\PrestaShop\PluginHealth; never edit)
 ├── controllers/front/ping.php            public ping endpoint of the Commando Center (module front controller)
-├── config/routes.yml                     supertext_translate (page), supertext_translate_run (one item × language)
+├── config/routes.yml                     supertext_translate (page), supertext_translate_run (one item × language),
+│                                         supertext_export, supertext_import (translation files)
 ├── config/services.yml                   the controller and the console command
 ├── src/
 │   ├── Api/                              no PrestaShop classes (unit-tested on their own)
@@ -26,7 +27,12 @@ supertext/
 │   │   ├── EntityTypes.php               what is translated: product, category, cms + their fields
 │   │   ├── FieldPlanner.php              which fields to send, what to write back (no PrestaShop classes)
 │   │   └── EntityTranslator.php          loads the ObjectModel, translates, validates, saves
-│   ├── Controller/Admin/TranslateController.php   the Translate with Supertext page + JSON endpoint
+│   ├── Files/                            Export for translation / Import translation (XLIFF, HTML)
+│   │   ├── FileExchange.php              export and import glue around the SDK's TranslationFiles (no PrestaShop classes)
+│   │   ├── ItemStore.php                 what it needs from the shop (items, languages, save)
+│   │   ├── PrestaShopItemStore.php       the real store: EntityTranslator::fields() / write()
+│   │   └── FileExchangeException.php
+│   ├── Controller/Admin/TranslateController.php   the Translate with Supertext page, JSON endpoint, export download, import
 │   ├── Command/TranslateCommand.php      bin/console supertext:translate
 │   └── Settings.php                      configuration values + SUPERTEXT_API_KEY / _API_ENDPOINT / _VERSION_REPORTS,
 │                                         language codes per shop language, the Reporting glue (site URL, state)
@@ -94,12 +100,22 @@ AI file translation API v1, same as all Supertext plugins. Every call goes throu
 
 ### Supertext SDK
 
-The protocol, the retries, the language list, the API key check (`Client::checkApiKey()`, `Protocol::apiKeyFingerprint()`) and the `data-st-id` document come from the official Supertext PHP SDK (0.3.0) ([Supertext/Supertext-API-SDK-and-Guide](https://github.com/Supertext/Supertext-API-SDK-and-Guide)). The module ships a copy in `supertext/lib/supertext-sdk/` with its namespace changed from `Supertext\Sdk` to `Supertext\PrestaShop\Sdk` (API classes in `…\Sdk\V1`, the HTTP transport in `…\Sdk\Http`; in the module's Composer class map, built by `./build.sh`), so shops install nothing extra and another module that ships the SDK itself can't clash with it. HTTP goes through the SDK's `CurlTransport` (ext-curl, which PrestaShop requires; proxy environment variables apply). `COMMIT` there names the SDK revision.
+The protocol, the retries, the language list, the API key check (`Client::checkApiKey()`, `Protocol::apiKeyFingerprint()`), the `data-st-id` document and the translation files (`Files\TranslationFiles`) come from the official Supertext PHP SDK (0.5.0) ([Supertext/Supertext-API-SDK-and-Guide](https://github.com/Supertext/Supertext-API-SDK-and-Guide)). The module ships a copy in `supertext/lib/supertext-sdk/` with its namespace changed from `Supertext\Sdk` to `Supertext\PrestaShop\Sdk` (API classes in `…\Sdk\V1`, the HTTP transport in `…\Sdk\Http`, translation files in `…\Sdk\Files`; in the module's Composer class map, built by `./build.sh`), so shops install nothing extra and another module that ships the SDK itself can't clash with it. HTTP goes through the SDK's `CurlTransport` (ext-curl, which PrestaShop requires; proxy environment variables apply). `COMMIT` there names the SDK revision.
 
 - Never edit `supertext/lib/supertext-sdk/`. Fix the SDK in its repository, then run `scripts/vendor-sdk.sh [ref]` (default `main`; `SDK_DIR=/path/to/clone` uses a local clone) and the tests.
 - `src/Api/SupertextClient.php` keeps the module's interface (`translateDocument`, `validateApiKey`) and turns every SDK error code into a `SupertextException` with an English template (the arms of the `$message = match` block in `fromSdk()`, which `tests/Support/ModuleStrings.php` reads; `LanguageCodes` uses `fromSdk()` too, and `errorCode()` / `isAuthenticationFailure()` give the SDK's code). A new SDK error code needs an arm there and its translation in the three edited XLF files (then `php tools/sync-translations.php`).
 - `FieldPlanner` builds and reads the document with the SDK's `HtmlDocument` and `Segment`.
 - PHPStan analyses the module's own code; `tests/phpstan/bootstrap.php` autoloads the SDK and Plugin Health copies.
+
+### Translation files (XLIFF and HTML)
+
+*Export for translation* and *Import translation* (SDK 0.5.0 `Supertext\PrestaShop\Sdk\Files\TranslationFiles`, integration guide → *Translation files*) live on the *Translate with Supertext* page: `TranslateController::exportAction()` (POST `supertext_export`: `type`, `id`, `source`, `targets[]`, `format`; answers with the file as an attachment) and `importAction()` (POST `supertext_import`, multipart `file`, `include_changed`, `overwrite`; JSON summary). Both need the same edit permission as translating; the import checks it per item in the file.
+
+- `Files\FileExchange` is the glue, without PrestaShop classes (`ItemStore` is the shop; `tests/Unit/FileExchangeTest.php` uses a fake). The segments are `FieldPlanner::fileSegments()` with `$overwrite = true`: every translatable field with source text, keyed by field name (`name`, `description`, …), the same fields an API translation sends. The import collects them again the same way, calls `importTranslations()`, and writes `ok` results (plus `source_changed` with *Also import texts whose source changed since the export*) through `FieldPlanner::fit()` (without *Overwrite existing translations*, fields already translated are kept, as for API translations; sizes trimmed) and `EntityTranslator::write()` (sanitizing, slug, validation, `update()`), the API translation's write-back.
+- Job metadata: `plugin` `PrestaShop-Supertext-Translation`; `reference` **`<type>:<id>:<source iso>:<target iso>`**, e.g. `product:42:en:fr` (type `product`, `category` or `cms`; PrestaShop's language `iso_code`s, which are unique per shop); `sourceLanguage`/`targetLanguage` the codes `LanguageCodes::source()`/`target()` give with the language's *Supertext language* setting, else the locale with `-` (`en-IE`), so unmapped languages don't block an export.
+- File names: `prestashop-<type>-<id>-<target code>.xlf` / `.html`, `prestashop-<type>-<id>.xlf` for several languages; `application/x-xliff+xml` / `text/html; charset=utf-8`.
+- Uploads over 10 MB are refused before they are read (`FileExchange::checkSize()`, also PHP's `UPLOAD_ERR_INI_SIZE`); the content is parsed in memory and the temporary upload deleted. The SDK refuses DTDs and markup the current source doesn't have.
+- Import errors per job: `other_system` (another plugin's file), `not_found` (unknown reference or deleted item), `no_language`, `not_allowed`; errors of the whole file: `invalid_file`, `missing_metadata`, `too_large`. The controller turns them into translated messages (`fileError()`).
 
 ### Supertext Plugin Health
 
@@ -167,7 +183,7 @@ To translate without a Supertext key, run the stand-in API (`node tests/docs/sta
 
 ```bash
 composer install
-composer test        # PHPUnit: SDK wrapper, language codes, reporting, field planner, entity types, translation files (no PrestaShop needed)
+composer test        # PHPUnit: SDK wrapper, language codes, reporting, field planner, entity types, XLIFF/HTML export and import, UI translation files (no PrestaShop needed)
 ./build.sh           # dist/supertext-<version>.zip
 ```
 
@@ -177,7 +193,7 @@ CI (`.github/workflows/ci.yml`):
 - **phpstan**: PHPStan on the module's code with the PrestaShop 9 sources (see *Code quality and security checks*).
 - **prestashop**: installs PrestaShop 9 in Docker, installs the built zip, runs `demo/setup.php` twice (the second run must change nothing, and no password may appear in the log), translates the sample product, category and page with `supertext:translate` against the stand-in API and checks the German and French rows, slug included; a second run must skip everything. Then it checks the Commando Center: exactly one `installed` report (plugin, system, key check `ok`, callback URL; never the key) reached the stand-in's fake center, and the public ping answers the challenge with `Cache-Control: no-store` (400 for a bad challenge).
 
-Unit tests worth knowing: `LanguageCodesTest` (exact matches, no default regions, the setting wins, sources, `unsupported_language`), `ReportingTest` (the report and the stored state never contain the key, the SDK version reported, a state stored by the SDK 0.2 reporter kept without a new report, `installed` → `settings_saved`, `upgraded` only after a version change, a 401 reported once without a request to Supertext, nothing sent with reports off, storage errors swallowed, ping answers, `SUPERTEXT_VERSION_REPORTS`), `SupertextClientTest` (codes sent as given, `unsupported_feature`, a rejected key).
+Unit tests worth knowing: `LanguageCodesTest` (exact matches, no default regions, the setting wins, sources, `unsupported_language`), `ReportingTest` (the report and the stored state never contain the key, the SDK version reported, a state stored by the SDK 0.2 reporter kept without a new report, `installed` → `settings_saved`, `upgraded` only after a version change, a 401 reported once without a request to Supertext, nothing sent with reports off, storage errors swallowed, ping answers, `SUPERTEXT_VERSION_REPORTS`), `SupertextClientTest` (codes sent as given, `unsupported_feature`, a rejected key), `FileExchangeTest` (reference round trip, export with the planner's keys and the language setting, import: other plugin, unknown reference, missing language, permission, `ok` written, `source_changed` only with the option, kept without *Overwrite*, `untranslated`/`invalid_markup`/`missing` not written, invalid files, the 10 MB limit).
 
 ## Demo (Railway)
 
@@ -289,3 +305,4 @@ The release attaches `supertext-X.Y.Z.zip`, built by `./build.sh` (module folder
 - Under mod_php (no `fastcgi_finish_request()`), the automatic key check and a due version report run at the end of the request instead of after the response; they only make a request when the key changed or a report is due (at most 10 s for the check, 3 s for the report).
 - Translation runs in the browser, one item and language at a time; very large selections (more than 100 items) are cut to 100. A background queue would allow more.
 - Professional (human) translation orders, as in the WordPress plugin, are not offered.
+- *Export for translation* exports one item at a time (XLIFF can hold several languages); a bulk export of a selection into one XLIFF file would be the next step. The docs have no screenshots of the export and import boxes yet (the screenshot script needs the Docker demo).

@@ -110,6 +110,10 @@ Employees whose profile may **edit** the item: *Catalog → Products* for produc
 
 The **Translate with Supertext** button on the product page (*Modules* tab) is shown to profiles with **view** permission on the module. Installing the module grants it to every profile; you can change that under *Advanced Parameters → Team → Permissions → Modules*. Only SuperAdmins can configure the module.
 
+### Export for translation and import
+
+The *Export for translation* and *Import translation* boxes on the *Translate with Supertext* page need the same permission as translating: **edit** on the item's list (products, categories or pages); an import is refused for items the employee may not edit. They don't need an API key and have nothing to configure. Uploaded files are limited to **10 MB** (PHP's own `upload_max_filesize` and `post_max_size` must allow that much if you want the full limit); they are read in memory and never stored on the server.
+
 ## Interface languages
 
 The module's screens (settings page, *Translate with Supertext* page, list actions, product page box and messages) are available in English, German, French and Italian. They follow the employee's back-office language: each employee chooses it under *Your profile* (avatar at the top right → *Your profile* → *Language*). The translations ship with the module (`supertext/translations/<locale>/`) for de-DE, de-AT, de-CH, fr-FR, fr-BE, fr-CA, fr-CH, it-IT and it-CH; other locales show English. Wordings changed under *International → Translations* (*Installed modules translations*, module *Supertext Translation*) take precedence.
@@ -183,6 +187,8 @@ Upload the new zip in *Modules → Module Manager → Upload a module* (or repla
 Failed translations are also written to *Advanced Parameters → Logs*.
 
 ## Security notes
+
+- Imported translation files are treated as untrusted input: at most 10 MB, no DTDs or entities, and the formatting written back can only be the formatting of the current source text (the Supertext SDK checks every segment).
 
 - Prefer the `SUPERTEXT_API_KEY` environment variable on servers: the key then never sits in the database or its backups.
 - The module only talks to the Supertext API you configured. Documents are deleted from Supertext right after download (and expire after 24 hours anyway).

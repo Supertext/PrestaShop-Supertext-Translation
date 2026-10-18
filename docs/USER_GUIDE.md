@@ -49,6 +49,39 @@ To replace existing translations, tick **Overwrite existing translations**. The 
 
 <img src="images/overwrite-warning.png" alt="Translate with Supertext for the CMS page Delivery and returns, already translated into German: Overwrite existing translations is ticked and a warning explains that fields that are already translated will be replaced and changes made by hand are lost" width="720">
 
+## Export for translation and import translated files
+
+Instead of translating through the Supertext API, you can download an item as a file, have it translated elsewhere and import the result. The *Translate with Supertext* page has two boxes below the table (for employees who may edit the items):
+
+**Export for translation**
+
+1. Open *Translate with Supertext* for the item (row action or bulk action in the list, as above) and choose the source language in *Translate from*.
+2. Under **Export for translation**, pick the item, the **File format** and the languages to translate into:
+   - **XLIFF 1.2 (for translation tools)**: one file for one or more languages. Choose this for translation tools such as Trados, memoQ or Phrase: formatting becomes protected tags that translators can move but not break.
+   - **HTML (one language per file)**: exactly one language. You can upload it to Supertext's web app or give it to anyone who translates HTML. Translators must leave the file's head and the `data-st-id` attributes alone.
+3. Click **Download file**. The file contains the same fields an API translation sends (see *What is translated*), all fields with text in the source language. An item without text says *Nothing to translate.*
+
+Send the file to your translator or translation agency, or upload it to Supertext's web app.
+
+**Import translation**
+
+1. On a *Translate with Supertext* page (any list), choose the translated file under **Import translation** (XLIFF or HTML, at most 10 MB).
+2. Tick **Overwrite existing translations** if fields that already have their own translation in that language should be replaced (as for API translations, they are kept otherwise). Tick **Also import texts whose source changed since the export** if texts edited in the source language after the export should still be imported (off by default: they would no longer match).
+3. Click **Import translation**. The file says which item and language it belongs to; the module writes the translations into that item's language fields, the friendly URL included, as an API translation would.
+
+The summary lists each item and language from the file:
+
+| Line | Meaning |
+| --- | --- |
+| *Imported: n* | Fields written. |
+| *n kept* | Already translated in the shop and *Overwrite existing translations* wasn't ticked. |
+| *Skipped, source changed since the export: n* | The source text was edited after the export; tick *Also import texts whose source changed since the export* to import them anyway. |
+| *Not translated in the file: n* | The translator left these empty (XLIFF only). |
+| *Formatting changed, not imported: n* | The translation broke or added formatting (tags, links); fix it in the file and import again. |
+| *Not in the file: n* | Fields that have text now but weren't in the file (e.g. filled in after the export). |
+
+An HTML file can't mark a text as untranslated: imported unchanged, it writes the source text into the target language. Errors: *This file isn't a valid XLIFF or HTML translation file*, *This file wasn't exported by the Supertext module, or its header was removed*, *This file belongs to another system (…)* (exported by another Supertext plugin), *The item this file was exported from no longer exists*, *The shop has no language …*, *The file is too large (at most 10 MB)*.
+
 ## What is translated
 
 | Item | Fields |

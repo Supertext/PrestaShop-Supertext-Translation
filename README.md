@@ -9,6 +9,7 @@ Tick items in *Catalog → Products*, *Catalog → Categories* or *Design → Pa
 - Friendly URLs follow the translated name while they are still untranslated
 - Fills only untranslated fields unless you tick *Overwrite existing translations*, with a clear warning first
 - Supertext language and formal or informal tone per shop language, chosen from Supertext's own list (no guessed codes)
+- **Export for translation** (XLIFF 1.2 or HTML) for translation tools, translators or Supertext's web app, and **import of the translated file**
 - Also on the command line: `php bin/console supertext:translate product 1 2 --to=de`
 
 ![The Translate with Supertext page after translating two products into German, French and Italian](docs/images/translate-results.png)
