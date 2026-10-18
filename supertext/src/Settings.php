@@ -98,6 +98,7 @@ final class Settings
     /** False when the setting was never saved (installs from before Translation review). */
     private static function storedReviewUrl(): string|false
     {
+        /** @var string|false|null $value getGlobalValue() returns false for a key that was never saved */
         $value = \Configuration::getGlobalValue(self::REVIEW_URL);
 
         return \is_string($value) ? $value : false;
