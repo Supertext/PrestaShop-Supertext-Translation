@@ -55,7 +55,8 @@ final class EntityTranslator
 
         $targetCode = Settings::targetCode($target);
 
-        $translatedHtml = $this->client->translateDocument(
+        // Languages with *Translation review* on go through the review service (same protocol).
+        $translatedHtml = $this->client->forReview(Settings::review($targetId))->translateDocument(
             $planner->document(),
             $targetCode,
             Settings::sourceCode($source),

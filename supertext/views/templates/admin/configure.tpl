@@ -65,6 +65,17 @@
         </div>
       </div>
 
+      <div class="form-group" id="supertext-review-url">
+        <label class="control-label col-lg-3" for="supertext-review-url-input">{l s='Review service URL' d='Modules.Supertext.Admin'}</label>
+        <div class="col-lg-6">
+          <input type="text" id="supertext-review-url-input" name="review_url" value="{$st.reviewUrl|escape:'html':'UTF-8'}" class="form-control">
+          <p class="help-block">
+            {l s='Address of Supertext\'s review service for languages with Translation review on. Only change it when Supertext gives you another address. Empty: Translation review is off for every language.' d='Modules.Supertext.Admin'}
+            {if $st.reviewUrlFromEnv}<br><strong class="st-review-url-env">{l s='The SUPERTEXT_REVIEW_URL environment variable is set and is used instead.' d='Modules.Supertext.Admin'}</strong>{/if}
+          </p>
+        </div>
+      </div>
+
       <div class="form-group">
         <label class="control-label col-lg-3" for="supertext-timeout">{l s='Timeout (seconds)' d='Modules.Supertext.Admin'}</label>
         <div class="col-lg-2">
@@ -111,6 +122,7 @@
           <th>{l s='Locale' d='Modules.Supertext.Admin'}</th>
           <th>{l s='Supertext language' d='Modules.Supertext.Admin'}</th>
           <th>{l s='Tone' d='Modules.Supertext.Admin'}</th>
+          <th>{l s='Translation review' d='Modules.Supertext.Admin'}</th>
         </tr>
       </thead>
       <tbody>
@@ -146,10 +158,22 @@
               </select>
               <p class="help-block st-tone-none"{if $language.politeness} style="display:none"{/if}>{l s='Supertext offers no formal/informal choice for this language.' d='Modules.Supertext.Admin'}</p>
             </td>
+            <td>
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" name="languages[{$language.id|intval}][review]" value="1" class="st-review"{if $language.review} checked{/if}>
+                  {l s='Translation review' d='Modules.Supertext.Admin'}
+                </label>
+              </div>
+            </td>
           </tr>
         {/foreach}
       </tbody>
     </table>
+    <p class="help-block" id="supertext-review-help">
+      {l s='Translation review: translations into a language with this box ticked go through Supertext\'s review service, so reviewers can check and correct them on your shop\'s website with the Supertext Localization Review extension. Their corrections are used the next time the item is translated.' d='Modules.Supertext.Admin'}
+      {if $st.reviewOff}<br><strong class="st-review-off">{l s='The review service URL is empty, so Translation review is off for every language.' d='Modules.Supertext.Admin'}</strong>{/if}
+    </p>
     <script>
       document.querySelectorAll('#supertext-languages select.st-language').forEach(function (select) {
         select.addEventListener('change', function () {

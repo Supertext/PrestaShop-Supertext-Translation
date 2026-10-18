@@ -32,12 +32,26 @@ final class SupertextClient
     public const STAGING = 'https://api.staging.supertext.com/v1/';
     public const TESTING = 'https://api.testing.supertext.com/v1/';
 
+    /**
+     * Supertext's review service (translation proxy of Supertext Localization Review). It speaks
+     * the same API and forwards to the live Supertext API, keeping every translation so reviewers
+     * can correct them on the shop's website. Used for languages with *Translation review* on.
+     */
+    public const REVIEW_URL = 'https://localizationreview-production.up.railway.app/v1/';
+
     private readonly Client $sdk;
     private readonly string $apiKey;
+
+    /** @var (\Closure(): self)|null builds the client for the review service (null: none) */
+    private readonly ?\Closure $makeReviewClient;
+
+    private ?self $reviewClient = null;
 
     /**
      * @param HttpTransport|callable(string $method, string $url, array<string, string> $headers, ?string $body): array{status: int, body: string, headers?: array<string, string>} $transport
      * @param callable(float $seconds): void|null $sleep tests: the SDK's clock then counts the slept time
+     * @param string $reviewUrl the review service for languages with *Translation review* on ('' = none, see forReview())
+     * @param string $pluginVersion the module's version, sent in the User-Agent
      */
     public function __construct(
         string $apiKey,
@@ -46,8 +60,17 @@ final class SupertextClient
         private readonly int $pollTimeout = 180,
         float $pollInterval = 2.0,
         ?callable $sleep = null,
+        string $reviewUrl = '',
+        string $pluginVersion = '',
     ) {
         $this->apiKey = self::normalizeKey($apiKey);
+        $baseUrl      = $baseUrl !== '' ? $baseUrl : self::LIVE;
+        $reviewUrl    = trim($reviewUrl);
+
+        // Same key, timeouts, transport and User-Agent; only the base URL differs.
+        $this->makeReviewClient = $reviewUrl === '' || rtrim($reviewUrl, '/') === rtrim($baseUrl, '/')
+            ? null
+            : fn (): self => new self($apiKey, $reviewUrl, $transport, $pollTimeout, $pollInterval, $sleep, '', $pluginVersion);
 
         $elapsed = 0.0;
         $sdkSleep = $sleep === null ? null : static function (float $seconds) use ($sleep, &$elapsed): void {
@@ -60,11 +83,12 @@ final class SupertextClient
 
         $this->sdk = new Client(
             $this->apiKey,
-            baseUrl: $baseUrl !== '' ? $baseUrl : self::LIVE,
+            baseUrl: $baseUrl,
             pollInterval: $pollInterval,
             timeout: (float) $pollTimeout,
             requestTimeout: 60.0,
-            userAgent: 'PrestaShop-Supertext-Translation',
+            // The module's version too, so Supertext and the review service see which release calls.
+            userAgent: Reporting::PLUGIN_NAME . ($pluginVersion !== '' ? '/' . $pluginVersion : ''),
             transport: $transport instanceof HttpTransport ? $transport : new CallableTransport($transport),
             sleep: $sdkSleep,
             clock: $clock,
@@ -88,6 +112,35 @@ final class SupertextClient
             'testing' => self::TESTING,
             default   => self::LIVE,
         };
+    }
+
+    /**
+     * The review service's base URL: SUPERTEXT_REVIEW_URL on the server (non-empty) wins over the
+     * setting; a setting that was never saved (false/null) means Supertext's review service;
+     * an empty setting turns Translation review off for every language.
+     */
+    public static function reviewUrlFor(string|false|null $setting, string $environment = ''): string
+    {
+        if (trim($environment) !== '') {
+            return trim($environment);
+        }
+
+        return $setting === false || $setting === null ? self::REVIEW_URL : trim($setting);
+    }
+
+    /**
+     * The client for translations into a language: the review service when its *Translation
+     * review* is on (same key, same protocol, created on first use), else this one. Without a
+     * review URL (or with the API's own URL), always this one. translateDocument() uploads, polls,
+     * downloads and deletes with the same client, so a job is collected where it was submitted.
+     */
+    public function forReview(bool $review): self
+    {
+        if (!$review || $this->makeReviewClient === null) {
+            return $this;
+        }
+
+        return $this->reviewClient ??= ($this->makeReviewClient)();
     }
 
     public function hasApiKey(): bool

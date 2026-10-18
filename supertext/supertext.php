@@ -134,6 +134,7 @@ class Supertext extends Module
             $locale     = Settings::localeOf(new Language($id));
             $code       = $saved[$id]['code'] ?? '';
             $tone       = $saved[$id]['tone'] ?? 'default';
+            $review     = $saved[$id]['review'] ?? false;
             $suggestion = LanguageCodes::suggest($locale);
             $selected   = $code !== '' ? $code : (string) $suggestion;
             $target     = LanguageCodes::targetOrNull($locale, $code);
@@ -148,6 +149,7 @@ class Supertext extends Module
                 'custom'            => $selected !== '' && !LanguageCodes::isTarget($selected),
                 'target'            => $target,
                 'tone'              => $tone,
+                'review'            => $review,
                 // Formal/informal only where the chosen target offers it (unknown codes: shown, Supertext decides).
                 'politeness'        => $politeness !== false,
                 'isDefault'         => $id === (int) Configuration::get('PS_LANG_DEFAULT'),
@@ -167,6 +169,9 @@ class Supertext extends Module
                 'endpointFromEnv' => Settings::endpointFromEnvironment(),
                 'environment'    => Settings::environment(),
                 'endpoint'       => Settings::customEndpoint(),
+                'reviewUrl'      => Settings::reviewUrlSetting(),
+                'reviewUrlFromEnv' => Settings::reviewUrlFromEnvironment(),
+                'reviewOff'      => Settings::reviewUrl() === '',
                 'timeout'        => Settings::timeout(),
                 'keyCheck'       => $check === null ? null : [
                     'status'  => $check->status,
@@ -211,7 +216,15 @@ class Supertext extends Module
             return [$this->displayError($this->trans('The custom API base URL must start with https://.', [], 'Modules.Supertext.Admin')), false];
         }
 
+        $reviewUrl = trim((string) Tools::getValue('review_url'));
+
+        if ($reviewUrl !== '' && !preg_match('#^https?://\S+$#i', $reviewUrl)) {
+            return [$this->displayError($this->trans('The review service URL must start with https://.', [], 'Modules.Supertext.Admin')), false];
+        }
+
         Configuration::updateGlobalValue(Settings::ENDPOINT, $endpoint);
+        // '' turns Translation review off for every language.
+        Configuration::updateGlobalValue(Settings::REVIEW_URL, $reviewUrl);
         Configuration::updateGlobalValue(Settings::TIMEOUT, max(30, min(1800, (int) Tools::getValue('timeout', 180))));
         Configuration::updateGlobalValue(Settings::VERSION_REPORTS, Tools::getValue('version_reports') ? 1 : 0);
 
@@ -221,6 +234,7 @@ class Supertext extends Module
         foreach ((array) Tools::getValue('languages', []) as $id => $row) {
             $code = trim((string) ($row['code'] ?? ''));
             $tone = (string) ($row['tone'] ?? 'default');
+            $review = !empty($row['review']);
 
             // Only Supertext's codes (the list), or the code already saved (one an earlier version accepted).
             if ($code !== '' && !LanguageCodes::isTarget($code) && $code !== ($saved[(int) $id]['code'] ?? '')) {
@@ -231,8 +245,8 @@ class Supertext extends Module
                 $tone = 'default';
             }
 
-            if ($code !== '' || $tone !== 'default') {
-                $languages[(int) $id] = ['code' => $code, 'tone' => in_array($tone, Settings::TONES, true) ? $tone : 'default'];
+            if ($code !== '' || $tone !== 'default' || $review) {
+                $languages[(int) $id] = ['code' => $code, 'tone' => in_array($tone, Settings::TONES, true) ? $tone : 'default', 'review' => $review];
             }
         }
 

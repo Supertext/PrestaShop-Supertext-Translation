@@ -30,6 +30,10 @@
         <source>API key checked: the connection to Supertext works.</source>
         <target>API-Schlüssel geprüft: Die Verbindung zu Supertext funktioniert.</target>
       </trans-unit>
+      <trans-unit id="b2b202e135f0772f82251fe4472d4a12">
+        <source>Address of Supertext's review service for languages with Translation review on. Only change it when Supertext gives you another address. Empty: Translation review is off for every language.</source>
+        <target>Adresse des Prüfdienstes von Supertext für Sprachen mit eingeschalteter Übersetzungsprüfung. Ändern Sie sie nur, wenn Supertext Ihnen eine andere Adresse nennt. Leer: Die Übersetzungsprüfung ist für alle Sprachen ausgeschaltet.</target>
+      </trans-unit>
       <trans-unit id="2c9f0fde2325cd6ef9a5c11e70837752">
         <source>Already translated, unchanged</source>
         <target>Bereits übersetzt, unverändert</target>
@@ -270,6 +274,10 @@
         <source>Remove the saved key</source>
         <target>Gespeicherten Schlüssel entfernen</target>
       </trans-unit>
+      <trans-unit id="3d6fac4870ed403b5ee7841a7bcad1ff">
+        <source>Review service URL</source>
+        <target>URL des Prüfdienstes</target>
+      </trans-unit>
       <trans-unit id="c9cc8cce247e49bae79f15173ce97354">
         <source>Save</source>
         <target>Speichern</target>
@@ -390,6 +398,10 @@
         <source>The SUPERTEXT_API_ENDPOINT environment variable is set and is used instead.</source>
         <target>Die Umgebungsvariable SUPERTEXT_API_ENDPOINT ist gesetzt und wird stattdessen verwendet.</target>
       </trans-unit>
+      <trans-unit id="35131b7f8d928b3df8cccfd9319203e4">
+        <source>The SUPERTEXT_REVIEW_URL environment variable is set and is used instead.</source>
+        <target>Die Umgebungsvariable SUPERTEXT_REVIEW_URL ist gesetzt und wird stattdessen verwendet.</target>
+      </trans-unit>
       <trans-unit id="41b4a228a6e45a5cf858819ea08dad68">
         <source>The SUPERTEXT_VERSION_REPORTS environment variable is set and turns it off.</source>
         <target>Die Umgebungsvariable SUPERTEXT_VERSION_REPORTS ist gesetzt und schaltet es aus.</target>
@@ -429,6 +441,14 @@
       <trans-unit id="4a3a68713ce55d74de42b709c5df01e8">
         <source>The requested Supertext resource was not found.</source>
         <target>Die angeforderte Supertext-Ressource wurde nicht gefunden.</target>
+      </trans-unit>
+      <trans-unit id="2ab1d1117b49d8b450e2ba945bff274f">
+        <source>The review service URL is empty, so Translation review is off for every language.</source>
+        <target>Die URL des Prüfdienstes ist leer, daher ist die Übersetzungsprüfung für alle Sprachen ausgeschaltet.</target>
+      </trans-unit>
+      <trans-unit id="d1d28e97075aa1849574a401a797e226">
+        <source>The review service URL must start with https://.</source>
+        <target>Die URL des Prüfdienstes muss mit https:// beginnen.</target>
       </trans-unit>
       <trans-unit id="2c4a53346eab30c4999f4fe4b97ad76c">
         <source>The shop has no language %language%.</source>
@@ -521,6 +541,14 @@
       <trans-unit id="1f27de6aa0cdb38aade4d63a52b5ab30">
         <source>Translating…</source>
         <target>Wird übersetzt …</target>
+      </trans-unit>
+      <trans-unit id="43c3d9994d21dfe450ad4c6739490cbf">
+        <source>Translation review</source>
+        <target>Übersetzungsprüfung</target>
+      </trans-unit>
+      <trans-unit id="de300b4fa11417b793ca858d771ad614">
+        <source>Translation review: translations into a language with this box ticked go through Supertext's review service, so reviewers can check and correct them on your shop's website with the Supertext Localization Review extension. Their corrections are used the next time the item is translated.</source>
+        <target>Übersetzungsprüfung: Übersetzungen in eine Sprache mit angekreuztem Kästchen laufen über den Prüfdienst von Supertext, damit Prüferinnen und Prüfer sie mit der Erweiterung Supertext Localization Review direkt auf der Website Ihres Shops kontrollieren und korrigieren können. Ihre Korrekturen werden beim nächsten Übersetzen des Artikels, der Kategorie oder der Seite übernommen.</target>
       </trans-unit>
       <trans-unit id="9c0229a92cbba3c2186662317d8b28bc">
         <source>User guide</source>

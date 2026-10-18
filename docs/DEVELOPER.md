@@ -17,7 +17,7 @@ supertext/
 ├── config/services.yml                   the controller and the console command
 ├── src/
 │   ├── Api/                              no PrestaShop classes (unit-tested on their own)
-│   │   ├── SupertextClient.php           wrapper around the Supertext SDK: errors → translatable templates
+│   │   ├── SupertextClient.php           wrapper around the Supertext SDK: errors → translatable templates; forReview() for languages with Translation review
 │   │   ├── CallableTransport.php         lets tests pass a fake HTTP callable
 │   │   ├── LanguageCodes.php             locales → Supertext codes (the SDK's Languages + the language setting; no guessing)
 │   │   ├── Reporting.php                 Commando Center: Plugin Health's InstallationReporter with the module's state
@@ -97,6 +97,16 @@ AI file translation API v1, same as all Supertext plugins. Every call goes throu
 - HTTP 429 (`RATE_LIMIT_EXCEEDED`, per second per key) is retried up to 4 times, after `Retry-After` or 1/2/4/8 s with jitter.
 - The API key check (*Save*, *Test connection*, see *Commando Center*) calls `GET {base}/features` (free).
 - Documents stay below 900,000 characters (API limit 1,000,000).
+- User-Agent: `supertext-sdk-php PrestaShop-Supertext-Translation/<version>` (the version from `supertext.php`, as in the version reports).
+
+### Translation review
+
+Per shop language, *Translation review* (`SUPERTEXT_LANGUAGES` → `review`, a checkbox in the row of the *Languages* panel; rows saved before have none and read as off) sends translations **into** that language through Supertext's review service, the translation proxy of [Supertext Localization Review](https://github.com/Supertext/Localization-Review-Supertext-Translation). It speaks the same API v1 (same paths, key header and errors), forwards to the live Supertext API with the module's key, stores every segment per key and serves reviewers' corrections on the next upload, so nothing else in the module changes.
+
+- `Settings::client()` builds `SupertextClient` with `reviewUrl` = `Settings::reviewUrl()`: `SUPERTEXT_REVIEW_URL` on the server (non-empty) wins over the setting *Review service URL* (configuration value `SUPERTEXT_REVIEW_URL`); never saved (installs from before) means `SupertextClient::REVIEW_URL` (`https://localizationreview-production.up.railway.app/v1/`); saved empty means off for every language (`SupertextClient::reviewUrlFor()`).
+- `SupertextClient::forReview(bool)` returns a second SDK client with the same key, timeouts, transport and User-Agent and the review URL as base URL, created on first use; without a review URL, or with the API's own URL, it returns the client itself. `EntityTranslator` calls `forReview(Settings::review($targetId))->translateDocument()`, and `translateDocument()` uploads, polls, downloads and deletes with that one client, so a job is always collected where it was submitted.
+- The API key check, *Test connection*, the version reports (`Reporting` builds its own SDK client on `Settings::baseUrl()`) and the translation files never use the review service.
+- Tests: `SupertextClientTest` (a review language's four calls go to the review URL with the same key and the versioned User-Agent, other languages go directly, an empty review URL or the API's own URL means no second client, `reviewUrlFor()` defaults and the environment variable).
 
 ### Supertext SDK
 
@@ -193,7 +203,7 @@ CI (`.github/workflows/ci.yml`):
 - **phpstan**: PHPStan on the module's code with the PrestaShop 9 sources (see *Code quality and security checks*).
 - **prestashop**: installs PrestaShop 9 in Docker, installs the built zip, runs `demo/setup.php` twice (the second run must change nothing, and no password may appear in the log), translates the sample product, category and page with `supertext:translate` against the stand-in API and checks the German and French rows, slug included; a second run must skip everything. Then it checks the Commando Center: exactly one `installed` report (plugin, system, key check `ok`, callback URL; never the key) reached the stand-in's fake center, and the public ping answers the challenge with `Cache-Control: no-store` (400 for a bad challenge).
 
-Unit tests worth knowing: `LanguageCodesTest` (exact matches, no default regions, the setting wins, sources, `unsupported_language`), `ReportingTest` (the report and the stored state never contain the key, the SDK version reported, a state stored by the SDK 0.2 reporter kept without a new report, `installed` → `settings_saved`, `upgraded` only after a version change, a 401 reported once without a request to Supertext, nothing sent with reports off, storage errors swallowed, ping answers, `SUPERTEXT_VERSION_REPORTS`), `SupertextClientTest` (codes sent as given, `unsupported_feature`, a rejected key), `FileExchangeTest` (reference round trip, export with the planner's keys and the language setting, import: other plugin, unknown reference, missing language, permission, `ok` written, `source_changed` only with the option, kept without *Overwrite*, `untranslated`/`invalid_markup`/`missing` not written, invalid files, the 10 MB limit).
+Unit tests worth knowing: `LanguageCodesTest` (exact matches, no default regions, the setting wins, sources, `unsupported_language`), `ReportingTest` (the report and the stored state never contain the key, the SDK version reported, a state stored by the SDK 0.2 reporter kept without a new report, `installed` → `settings_saved`, `upgraded` only after a version change, a 401 reported once without a request to Supertext, nothing sent with reports off, storage errors swallowed, ping answers, `SUPERTEXT_VERSION_REPORTS`), `SupertextClientTest` (codes sent as given, `unsupported_feature`, a rejected key, Translation review: `forReview()`, the default `REVIEW_URL`, off with an empty URL), `FileExchangeTest` (reference round trip, export with the planner's keys and the language setting, import: other plugin, unknown reference, missing language, permission, `ok` written, `source_changed` only with the option, kept without *Overwrite*, `untranslated`/`invalid_markup`/`missing` not written, invalid files, the 10 MB limit).
 
 ## Demo (Railway)
 
@@ -219,7 +229,8 @@ Variables (Railway service variables; template in `demo/.env.example`):
 | `PRESTASHOP_ADMIN_FOLDER` | Back-office path (default `admin-dev`) |
 | `PRESTASHOP_DOMAIN` | Public host name; default `RAILWAY_PUBLIC_DOMAIN`. (Not `PS_DOMAIN`: the base image sets that to a placeholder.) |
 | `SUPERTEXT_API_KEY` | Supertext API key. No Supertext account yet? Create one at https://www.supertext.com/person/en/account/signin. Generate your API key at https://www.supertext.com/en/integrations/api (requires the Admin role). |
-| `SUPERTEXT_API_ENDPOINT` | Optional: another API, e.g. the stand-in |
+| `SUPERTEXT_API_ENDPOINT` | Optional: another API, e.g. the stand-in (to try the review service, tick *Translation review* for a language instead) |
+| `SUPERTEXT_REVIEW_URL` | Optional: another review service than Supertext's for languages with *Translation review* on (wins over *Review service URL*; empty keeps the setting) |
 | `SUPERTEXT_VERSION_REPORTS` | Optional: `0` turns *Send version information to Supertext* off (wins over the setting) |
 | `SUPERTEXT_REPORT_URL` | Tests only: where version reports go (the stand-in's `http://127.0.0.1:8765/report`) |
 | `DEMO_ADMIN_EMAIL`, `DEMO_ADMIN_PASSWORD` | SuperAdmin for Supertext staff. `PRESTASHOP_ADMIN_EMAIL` / `PRESTASHOP_ADMIN_PASSWORD` are read as fallbacks. |
@@ -305,4 +316,5 @@ The release attaches `supertext-X.Y.Z.zip`, built by `./build.sh` (module folder
 - Under mod_php (no `fastcgi_finish_request()`), the automatic key check and a due version report run at the end of the request instead of after the response; they only make a request when the key changed or a report is due (at most 10 s for the check, 3 s for the report).
 - Translation runs in the browser, one item and language at a time; very large selections (more than 100 items) are cut to 100. A background queue would allow more.
 - Professional (human) translation orders, as in the WordPress plugin, are not offered.
+- Re-translating overwrites manual changes only with *Overwrite existing translations*; there is no change detection. A translation memory and reviewers' corrections come from the review service when a language has *Translation review* on; corrections reach PrestaShop only with the next translation with *Overwrite* (no push). The docs' screenshots of the settings page don't show the *Review service URL* field and the *Translation review* column yet (the screenshot script needs the Docker demo).
 - *Export for translation* exports one item at a time (XLIFF can hold several languages); a bulk export of a selection into one XLIFF file would be the next step. The docs have no screenshots of the export and import boxes yet (the screenshot script needs the Docker demo).

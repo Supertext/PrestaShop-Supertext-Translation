@@ -98,6 +98,8 @@ An HTML file can't mark a text as untranslated: imported unchanged, it writes th
 
 Open the item, switch to the language and read the fields; the translation is live as soon as the item is active in the shop. To check it in the shop, open the product, category or page there and switch the language.
 
+**Translation review:** if your administrator turned on *Translation review* for a language, reviewers (your colleagues or Supertext linguists) check and correct the translations on the shop's website. Their corrections come into PrestaShop the next time you translate the items into that language: after a review, translate them again with *Overwrite existing translations* ticked. Texts reviewed once keep their corrected wording in later translations.
+
 ## When something goes wrong
 
 The table shows the reason for each item and language that fails; the other ones still run.
